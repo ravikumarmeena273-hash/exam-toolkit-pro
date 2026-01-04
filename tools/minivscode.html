@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mini VS Code PWA</title>
+    
+    <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIk1pbmlWUyIsCiAgInNob3J0X25hbWUiOiAiTWluaVZTIiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiMxZTFlMWUiLAogICJ0aGVtZV9jb2xvciI6ICIjMWUxZTFlIiwKICAiaWNvbnMiOiBbCiAgICB7CiAgICAgICJzcmMiOiAiaHR0cHM6Ly9pbWcuaWNvbnM4LmNvbS9jb2xvci8xOTIvdmlzdWFsLXN0dWRpby1jb2RlLTIwMTkucG5nIiwKICAgICAgInNpemVzIjogIjE5MngxOTIiLAogICAgICAidHlwZSI6ICJpbWFnZS9wbmciCiAgICB9CiAgXQp9">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.js"></script>
+
+    <style>
+        :root {
+            --bg-root: #1e1e1e;
+            --bg-sidebar: #252526;
+            --bg-activity-bar: #333333;
+            --bg-editor: #1e1e1e;
+            --bg-tab: #2d2d2d;
+            --bg-tab-active: #1e1e1e;
+            --bg-status: #007acc;
+            --bg-menu: #333333;
+            --bg-menu-hover: #505050;
+            --text-primary: #cccccc;
+            --text-secondary: #969696;
+            --border-color: #3e3e42;
+            --accent: #007acc;
+            --hover: #2a2d2e;
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --tab-height: 35px;
+            --status-height: 22px;
+            --menu-height: 30px;
+        }
+
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; outline: none; }
+        body { margin: 0; padding: 0; width: 100vw; height: 100vh; background-color: var(--bg-root); color: var(--text-primary); font-family: var(--font-family); overflow: hidden; display: flex; flex-direction: column; }
+
+        /* Menu Bar */
+        #menubar { height: var(--menu-height); background-color: var(--bg-menu); display: flex; align-items: center; padding: 0 10px; font-size: 13px; border-bottom: 1px solid #000; z-index: 100; position: relative; }
+        .menu-item { padding: 5px 10px; cursor: pointer; border-radius: 4px; }
+        .menu-item:hover { background-color: var(--bg-menu-hover); color: white; }
+        
+        #file-dropdown {
+            position: absolute; top: var(--menu-height); left: 5px; width: 220px;
+            background-color: #252526; border: 1px solid #454545;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5); border-radius: 4px;
+            display: none; flex-direction: column; padding: 5px 0;
+        }
+        #file-dropdown.show { display: flex; }
+        
+        .dropdown-item {
+            padding: 8px 15px; cursor: pointer; display: flex; justify-content: space-between; font-size: 13px; color: #ccc;
+        }
+        .dropdown-item:hover { background-color: #094771; color: white; }
+        .shortcut { color: #888; font-size: 11px; }
+        .dropdown-divider { height: 1px; background-color: #454545; margin: 4px 0; }
+
+        /* Layout Grid */
+        #app-container { display: flex; flex: 1; overflow: hidden; height: calc(100vh - var(--status-height) - var(--menu-height)); }
+
+        /* Activity Bar */
+        #activity-bar { width: 48px; background-color: var(--bg-activity-bar); display: flex; flex-direction: column; align-items: center; padding-top: 10px; z-index: 10; }
+        .activity-icon { width: 48px; height: 48px; display: flex; justify-content: center; align-items: center; cursor: pointer; color: var(--text-secondary); font-size: 20px; transition: color 0.2s; }
+        .activity-icon:hover, .activity-icon.active { color: #fff; }
+        .activity-icon.active { border-left: 2px solid var(--accent); }
+
+        /* Sidebar */
+        #sidebar { width: 250px; background-color: var(--bg-sidebar); display: flex; flex-direction: column; border-right: 1px solid var(--border-color); }
+        #sidebar-header { padding: 10px 20px; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center; }
+        #file-tree { flex: 1; overflow-y: auto; padding: 5px 0; }
+        
+        .tree-item { padding: 4px 10px 4px 20px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .tree-item:hover { background-color: var(--hover); }
+        .tree-item.active { background-color: #37373d; color: #fff; }
+        .folder-content { padding-left: 12px; display: none; }
+        .folder.open > .folder-content { display: block; }
+        .folder > .tree-label::before { content: '\f0da'; font-family: "Font Awesome 6 Free"; font-weight: 900; display: inline-block; margin-right: 5px; transform: rotate(0deg); transition: transform 0.2s; }
+        .folder.open > .tree-label::before { transform: rotate(90deg); }
+
+        /* Editor */
+        #main-editor-area { flex: 1; display: flex; flex-direction: column; background-color: var(--bg-editor); overflow: hidden; }
+        #tabs-container { height: var(--tab-height); background-color: var(--bg-sidebar); display: flex; overflow-x: auto; border-bottom: 1px solid var(--bg-root); }
+        #tabs-container::-webkit-scrollbar { height: 3px; }
+        #tabs-container::-webkit-scrollbar-thumb { background: var(--accent); }
+        
+        .tab { padding: 0 10px; min-width: 120px; max-width: 200px; height: 100%; display: flex; align-items: center; justify-content: space-between; background-color: var(--bg-tab); color: var(--text-secondary); font-size: 13px; cursor: pointer; border-right: 1px solid var(--bg-root); }
+        .tab.active { background-color: var(--bg-tab-active); color: #fff; border-top: 1px solid var(--accent); }
+        .tab-close:hover { color: #fff; background: #444; border-radius: 50%; }
+        .tab.unsaved .tab-close::before { content: "\f111"; font-size: 8px; }
+
+        /* Status Bar */
+        #status-bar { height: var(--status-height); background-color: var(--accent); color: #fff; display: flex; justify-content: space-between; align-items: center; padding: 0 10px; font-size: 12px; z-index: 20; }
+        .status-item { margin-right: 15px; display: flex; align-items: center; gap: 5px; }
+
+        /* Modals */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal.active { display: flex; }
+        .modal-content { background: var(--bg-sidebar); padding: 20px; border-radius: 8px; width: 400px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); border: 1px solid var(--border-color); }
+        .modal-header { font-size: 16px; font-weight: bold; margin-bottom: 15px; display: flex; justify-content: space-between; }
+        input[type="text"] { width: 100%; padding: 8px; background: var(--bg-root); border: 1px solid var(--border-color); color: white; border-radius: 4px; outline: none; }
+        .btn { background: var(--accent); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; float: right; }
+        .btn-secondary { background: #444; margin-right: 10px; }
+
+        @media (max-width: 768px) {
+            #sidebar { position: absolute; height: 100%; z-index: 50; transform: translateX(-100%); transition: transform 0.3s; box-shadow: 2px 0 10px rgba(0,0,0,0.5); height: calc(100vh - var(--status-height) - var(--menu-height)); top: var(--menu-height); left: 48px; }
+            #sidebar.mobile-open { transform: translateX(0); }
+        }
+    </style>
+</head>
+<body onclick="closeDropdowns()">
+
+    <div id="menubar">
+        <div class="menu-item" onclick="toggleFileMenu(event)">File</div>
+        <div id="file-dropdown">
+            <div class="dropdown-item" onclick="showNewFileDialog()">New File <span class="shortcut">Ctrl+N</span></div>
+            <div class="dropdown-item" onclick="openNativeFile()">Open File... <span class="shortcut">Ctrl+O</span></div>
+            <div class="dropdown-item" onclick="openFolderHandle()">Open Folder...</div>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-item" onclick="saveCurrentFile()">Save <span class="shortcut">Ctrl+S</span></div>
+            <div class="dropdown-item" onclick="saveAsNativeFile()">Save As... <span class="shortcut">Ctrl+Shift+S</span></div>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-item" onclick="exportCurrentFile()">Export Current File</div>
+            <div class="dropdown-item" onclick="triggerZipUpload()">Import ZIP Project</div>
+            <div class="dropdown-item" onclick="exportZip()">Export Project ZIP</div>
+        </div>
+        <div style="flex:1"></div>
+        <div style="font-size:12px; color: #666">MiniVS Web</div>
+    </div>
+
+    <div id="app-container">
+        <div id="activity-bar">
+            <div class="activity-icon active" onclick="toggleSidebar()"><i class="fa-regular fa-file"></i></div>
+            <div class="activity-icon"><i class="fa-solid fa-search"></i></div>
+            <div class="activity-icon" style="margin-top: auto;"><i class="fa-solid fa-gear"></i></div>
+        </div>
+
+        <div id="sidebar">
+            <div id="sidebar-header">
+                <span>Explorer</span>
+                <i class="fa-solid fa-rotate-right" title="Reload Tree" onclick="renderFileTree()" style="cursor:pointer"></i>
+            </div>
+            <div id="file-tree"></div>
+        </div>
+
+        <div id="main-editor-area">
+            <div id="tabs-container"></div>
+            <div id="monaco-container" style="flex:1"></div>
+        </div>
+    </div>
+
+    <div id="status-bar">
+        <div style="display: flex;">
+            <div class="status-item"><i class="fa-solid fa-code-branch"></i> main*</div>
+        </div>
+        <div style="display: flex;">
+            <div class="status-item" id="cursor-position">Ln 1, Col 1</div>
+            <div class="status-item" id="lang-mode">Plain Text</div>
+        </div>
+    </div>
+
+    <input type="file" id="zip-input" accept=".zip" style="display: none;" onchange="handleZipUpload(this)">
+    <input type="file" id="file-uploader" style="display: none;" onchange="handleFallbackFileUpload(this)" multiple>
+
+    <div id="new-file-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>New File</span>
+                <i class="fa-solid fa-xmark" onclick="closeModals()" style="cursor:pointer"></i>
+            </div>
+            <input type="text" id="new-file-name" placeholder="filename.js">
+            <button class="btn" onclick="createNewFile()">Create</button>
+            <button class="btn btn-secondary" onclick="closeModals()">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        /** SERVICE WORKER */
+        if ('serviceWorker' in navigator) {
+            const sw = `self.addEventListener('fetch',e=>{e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)))});`;
+            const blob = new Blob([sw], {type:'application/javascript'});
+            navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(console.error);
+        }
+
+        /** STATE */
+        const state = {
+            files: {}, // IDB Persistent
+            fileHandles: {}, // Runtime Only (Memory)
+            openTabs: [],
+            activeTabId: null,
+            rootId: 'root',
+            editor: null,
+            db: null
+        };
+
+        const langMap = { 'js':'javascript', 'html':'html', 'css':'css', 'json':'json', 'py':'python', 'java':'java', 'cpp':'cpp', 'txt':'plaintext', 'md':'markdown', 'xml':'xml', 'ts':'typescript' };
+        
+        /** DB & INIT */
+        const DB_NAME = 'MiniVS_DB', STORE = 'files';
+        function initDB() {
+            const req = indexedDB.open(DB_NAME, 1);
+            req.onupgradeneeded = e => { if(!e.target.result.objectStoreNames.contains(STORE)) e.target.result.createObjectStore(STORE); };
+            req.onsuccess = e => { state.db = e.target.result; loadFS(); };
+        }
+        function saveToDB() {
+            if(!state.db) return;
+            state.db.transaction(STORE, 'readwrite').objectStore(STORE).put(state.files, 'root_fs');
+        }
+        function loadFS() {
+            state.db.transaction(STORE, 'readonly').objectStore(STORE).get('root_fs').onsuccess = e => {
+                if(e.target.result) state.files = e.target.result;
+                else state.files = { 'root': {id:'root', name:'Project', type:'folder', parentId:null} };
+                renderFileTree();
+            };
+        }
+
+        /** MONACO */
+        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' }});
+        require(['vs/editor/editor.main'], function() {
+            state.editor = monaco.editor.create(document.getElementById('monaco-container'), {
+                value: '', language: 'plaintext', theme: 'vs-dark', automaticLayout: true, minimap: {enabled:true}
+            });
+            state.editor.onDidChangeModelContent(() => {
+                if(state.activeTabId) document.querySelector(`.tab[data-id="${state.activeTabId}"]`)?.classList.add('unsaved');
+                updateCursor();
+            });
+            state.editor.onDidChangeCursorPosition(updateCursor);
+            
+            // Keybindings
+            state.editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => saveCurrentFile());
+            document.addEventListener('keydown', e => {
+                if(e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 's') { e.preventDefault(); saveAsNativeFile(); }
+                else if(e.ctrlKey && e.key.toLowerCase() === 'o') { e.preventDefault(); openNativeFile(); }
+                else if(e.ctrlKey && e.key.toLowerCase() === 'n') { e.preventDefault(); showNewFileDialog(); }
+            });
+
+            initDB();
+        });
+
+        /** FILE MENU ACTIONS */
+        function toggleFileMenu(e) { e.stopPropagation(); document.getElementById('file-dropdown').classList.toggle('show'); }
+        function closeDropdowns() { document.getElementById('file-dropdown').classList.remove('show'); }
+
+        // 1. OPEN FILE (Native or Fallback)
+        async function openNativeFile() {
+            closeDropdowns();
+            if('showOpenFilePicker' in window) {
+                try {
+                    const [handle] = await window.showOpenFilePicker({ multiple: false });
+                    const file = await handle.getFile();
+                    const content = await file.text();
+                    loadFileIntoApp(file.name, content, handle);
+                    showToast("Opened: " + file.name);
+                } catch(err) { console.log('Open cancelled'); }
+            } else {
+                document.getElementById('file-uploader').click();
+            }
+        }
+        function handleFallbackFileUpload(input) {
+            const file = input.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                loadFileIntoApp(file.name, e.target.result, null);
+                showToast("Opened: " + file.name);
+            };
+            reader.readAsText(file);
+            input.value = '';
+        }
+        function loadFileIntoApp(name, content, handle) {
+            const id = uuidv4();
+            const ext = name.split('.').pop().toLowerCase();
+            state.files[id] = { id, name, type: 'file', parentId: 'root', content, language: langMap[ext] || 'plaintext' };
+            if(handle) state.fileHandles[id] = handle;
+            saveToDB(); renderFileTree(); openFile(id);
+        }
+
+        // 2. SAVE (Native Check)
+        async function saveCurrentFile() {
+            closeDropdowns();
+            if(!state.activeTabId) return;
+            const content = state.editor.getValue();
+            const id = state.activeTabId;
+            const handle = state.fileHandles[id];
+
+            // Always update internal IDB first
+            state.files[id].content = content;
+            saveToDB();
+            document.querySelector(`.tab[data-id="${id}"]`)?.classList.remove('unsaved');
+
+            // Native Save Logic
+            if(handle) {
+                try {
+                    const writable = await handle.createWritable();
+                    await writable.write(content);
+                    await writable.close();
+                    showToast("Saved to Disk");
+                } catch(e) { 
+                    console.error(e); 
+                    showToast("Error Saving to Disk");
+                    // If permissions lost, maybe trigger Save As? 
+                    // For now just error toast.
+                }
+            } else {
+                // If it's a new file (no handle), we treat "Save" as "Save As" 
+                // IF we want to force disk save. 
+                // But for PWA ease, let's keep it locally saved (done above) 
+                // unless user explicitly hits Ctrl+Shift+S.
+                // However, standard desktop behavior implies asking where to save if untitled.
+                // Let's prompt Save As if it's "Untitled" or just local.
+                const userWantsDisk = confirm("File is only saved in browser cache.\nSave to Disk?");
+                if(userWantsDisk) saveAsNativeFile();
+                else showToast("Saved Locally");
+            }
+        }
+
+        // 3. SAVE AS (Unrestricted)
+        async function saveAsNativeFile() {
+            closeDropdowns();
+            if(!state.activeTabId) return;
+            const content = state.editor.getValue();
+            const oldId = state.activeTabId;
+            const oldFile = state.files[oldId];
+
+            if('showSaveFilePicker' in window) {
+                try {
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: oldFile.name,
+                        types: [] // Allow all types
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(content);
+                    await writable.close();
+                    
+                    // Update Internal State to match new file identity
+                    state.fileHandles[oldId] = handle;
+                    state.files[oldId].name = handle.name;
+                    // Detect new language if extension changed
+                    const newExt = handle.name.split('.').pop().toLowerCase();
+                    state.files[oldId].language = langMap[newExt] || 'plaintext';
+                    
+                    saveToDB();
+                    renderFileTree();
+                    renderTabs();
+                    // Update editor language
+                    const model = state.editor.getModel();
+                    if(model) monaco.editor.setModelLanguage(model, state.files[oldId].language);
+                    
+                    showToast("Saved As " + handle.name);
+                } catch(e) { console.log('Save As cancelled'); }
+            } else {
+                // Fallback: Download via Blob
+                fallbackDownload(oldFile.name, content);
+            }
+        }
+
+        // 4. EXPORT CURRENT FILE (Save Copy)
+        async function exportCurrentFile() {
+            closeDropdowns();
+            if(!state.activeTabId) return;
+            const file = state.files[state.activeTabId];
+            const content = state.editor.getValue();
+
+            // Try Native "Save" first to allow picking location
+            if('showSaveFilePicker' in window) {
+                try {
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: file.name,
+                        types: [] 
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(content);
+                    await writable.close();
+                    showToast("Exported Successfully");
+                } catch (e) {
+                     // User cancelled or error, do nothing or fallback?
+                     // If user cancelled, we shouldn't force download.
+                }
+            } else {
+                // Fallback for Android/Old Browsers
+                fallbackDownload(file.name, content);
+            }
+        }
+
+        function fallbackDownload(filename, content) {
+            const blob = new Blob([content], {type: "text/plain"});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast("Downloaded " + filename);
+        }
+
+        // 5. ZIP EXPORT/IMPORT
+        function triggerZipUpload() { document.getElementById('zip-input').click(); closeDropdowns(); }
+        async function handleZipUpload(input) {
+            const zip = await JSZip.loadAsync(input.files[0]);
+            state.files = { 'root': state.files['root'] }; // Clear but keep root
+            state.openTabs = []; state.activeTabId = null; state.editor.setValue('');
+            state.fileHandles = {}; // Clear handles
+            
+            const map = { '': 'root' };
+            // Folders
+            for (const [path, entry] of Object.entries(zip.files)) {
+                if(entry.dir) {
+                    const id = uuidv4();
+                    const clean = path.replace(/\/$/, '');
+                    const parts = clean.split('/');
+                    const name = parts.pop();
+                    const parent = parts.join('/');
+                    state.files[id] = { id, name, type: 'folder', parentId: map[parent]||'root' };
+                    map[clean] = id;
+                }
+            }
+            // Files
+            for (const [path, entry] of Object.entries(zip.files)) {
+                if(!entry.dir) {
+                    const content = await entry.async("string");
+                    const id = uuidv4();
+                    const parts = path.split('/');
+                    const name = parts.pop();
+                    const parent = parts.join('/');
+                    state.files[id] = { id, name, type: 'file', parentId: map[parent]||'root', content, language: langMap[name.split('.').pop()]||'plaintext' };
+                }
+            }
+            saveToDB(); renderFileTree(); input.value = '';
+            showToast("Project Imported");
+        }
+
+        async function exportZip() {
+            closeDropdowns();
+            const zip = new JSZip();
+            const add = (pid, folder) => {
+                Object.values(state.files).filter(f=>f.parentId===pid).forEach(f => {
+                    if(f.type==='folder') add(f.id, folder.folder(f.name));
+                    else folder.file(f.name, f.content);
+                });
+            };
+            add('root', zip);
+            const blob = await zip.generateAsync({type:"blob"});
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download="project.zip"; a.click();
+            showToast("Project Zipped");
+        }
+
+        // 6. NATIVE FOLDER
+        async function openFolderHandle() {
+            closeDropdowns();
+            if('showDirectoryPicker' in window) {
+                try {
+                    const handle = await window.showDirectoryPicker();
+                    state.files = { 'root': state.files['root'] };
+                    state.fileHandles = {};
+                    
+                    async function scan(h, pid) {
+                        for await (const entry of h.values()) {
+                            const id = uuidv4();
+                            if(entry.kind==='file') {
+                                const file = await entry.getFile();
+                                state.files[id] = { id, name: entry.name, type: 'file', parentId: pid, content: await file.text(), language: langMap[entry.name.split('.').pop()]||'plaintext' };
+                                state.fileHandles[id] = entry; // Store handle
+                            } else {
+                                state.files[id] = { id, name: entry.name, type: 'folder', parentId: pid };
+                                await scan(entry, id);
+                            }
+                        }
+                    }
+                    await scan(handle, 'root');
+                    saveToDB(); renderFileTree();
+                    showToast("Folder Opened");
+                } catch(e) { console.log(e); }
+            } else { alert("Not supported on this device. Use ZIP."); }
+        }
+
+        /** CORE UI LOGIC */
+        function openFile(id) {
+            const f = state.files[id];
+            if(!state.openTabs.includes(id)) { state.openTabs.push(id); renderTabs(); }
+            state.activeTabId = id;
+            const model = state.editor.getModel();
+            if(model) { monaco.editor.setModelLanguage(model, f.language); state.editor.setValue(f.content); }
+            
+            document.querySelectorAll('.tab, .tree-item').forEach(e=>e.classList.remove('active'));
+            document.querySelector(`.tab[data-id="${id}"]`)?.classList.add('active');
+            document.querySelector(`.tree-item[data-id="${id}"]`)?.classList.add('active');
+            document.getElementById('lang-mode').textContent = f.language.toUpperCase();
+        }
+
+        function renderTabs() {
+            const c = document.getElementById('tabs-container'); c.innerHTML = '';
+            state.openTabs.forEach(id => {
+                const f = state.files[id];
+                const div = document.createElement('div');
+                div.className = `tab ${state.activeTabId===id?'active':''}`;
+                div.setAttribute('data-id', id);
+                div.onclick = ()=>openFile(id);
+                div.innerHTML = `<i class="fa-brands fa-${getFileIcon(f.name)}"></i> <span style="margin:0 5px">${f.name}</span> <i class="fa-solid fa-xmark tab-close" onclick="closeTab(event,'${id}')"></i>`;
+                c.appendChild(div);
+            });
+        }
+        function closeTab(e, id) {
+            e.stopPropagation();
+            const t = document.querySelector(`.tab[data-id="${id}"]`);
+            if(t.classList.contains('unsaved') && !confirm("Discard changes?")) return;
+            state.openTabs = state.openTabs.filter(x=>x!==id);
+            if(state.activeTabId === id) {
+                state.activeTabId = state.openTabs[state.openTabs.length-1] || null;
+                if(state.activeTabId) openFile(state.activeTabId); else state.editor.setValue('');
+            }
+            renderTabs();
+        }
+
+        function renderFileTree() {
+            const c = document.getElementById('file-tree'); c.innerHTML = '';
+            const render = (pid, el) => {
+                Object.values(state.files).filter(f=>f.parentId===pid).sort((a,b)=>(a.type===b.type?a.name.localeCompare(b.name):a.type==='folder'?-1:1))
+                .forEach(f => {
+                    const d = document.createElement('div');
+                    if(f.type==='folder') {
+                        d.className = 'folder';
+                        d.innerHTML = `<div class="tree-item tree-label" onclick="this.parentElement.classList.toggle('open')"><i class="fa-solid fa-folder" style="color:#dcb67a"></i> ${f.name}</div><div class="folder-content"></div>`;
+                        render(f.id, d.querySelector('.folder-content'));
+                    } else {
+                        d.className = `tree-item ${state.activeTabId===f.id?'active':''}`;
+                        d.setAttribute('data-id', f.id);
+                        d.onclick = ()=>openFile(f.id);
+                        d.innerHTML = `<i class="fa-brands fa-${getFileIcon(f.name)}" style="color:${getFileColor(f.name)}"></i> ${f.name}`;
+                    }
+                    el.appendChild(d);
+                });
+            };
+            render('root', c);
+        }
+
+        /** UTILS */
+        function uuidv4() { return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c=>{const r=Math.random()*16|0;return(c=='x'?r:(r&0x3|0x8)).toString(16)}); }
+        function getFileIcon(n) { const x=n.split('.').pop(); return ({'html':'html5','css':'css3-alt','js':'js','json':'node','py':'python','java':'java','cpp':'cuttlefish','md':'markdown'}[x]||'file'); }
+        function getFileColor(n) { const x=n.split('.').pop(); return ({'html':'#e34c26','css':'#563d7c','js':'#f1e05a','ts':'#2b7489'}[x]||'#ccc'); }
+        function toggleSidebar() { const s = document.getElementById('sidebar'); if(window.innerWidth<=768) s.classList.toggle('mobile-open'); else s.style.width = s.style.width==='0px'?'250px':'0px'; }
+        function updateCursor() { const p = state.editor.getPosition(); if(p) document.getElementById('cursor-position').textContent = `Ln ${p.lineNumber}, Col ${p.column}`; }
+        function showToast(msg) { const b = document.getElementById('lang-mode'); const old = b.textContent; b.textContent = msg; b.style.color = '#0f0'; setTimeout(()=>{b.textContent=old;b.style.color='#fff'}, 2000); }
+        
+        /* Modal Actions */
+        function showNewFileDialog() { document.getElementById('new-file-modal').classList.add('active'); document.getElementById('new-file-name').focus(); closeDropdowns(); }
+        function closeModals() { document.querySelectorAll('.modal').forEach(m=>m.classList.remove('active')); }
+        function createNewFile() {
+            const name = document.getElementById('new-file-name').value;
+            if(name) {
+                const id = uuidv4();
+                state.files[id] = { id, name, type:'file', parentId:'root', content:'', language:langMap[name.split('.').pop()]||'plaintext' };
+                saveToDB(); renderFileTree(); openFile(id); closeModals();
+            }
+        }
+    </script>
+</body>
+</html>

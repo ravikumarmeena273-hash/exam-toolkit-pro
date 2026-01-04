@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Exam Toolkit Pro</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --md-sys-color-primary: #006492;
+            --md-sys-color-on-primary: #ffffff;
+            --md-sys-color-primary-container: #cae6ff;
+            --md-sys-color-on-primary-container: #001e30;
+            --md-sys-color-secondary: #50606e;
+            --md-sys-color-background: #fdfcff;
+            --md-sys-color-surface: #fdfcff;
+            --md-sys-color-surface-variant: #dee3eb;
+            --md-sys-color-on-surface: #1a1c1e;
+            --md-sys-color-outline: #72777f;
+            --elevation-1: 0px 1px 3px 1px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.3);
+            --elevation-2: 0px 2px 6px 2px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.3);
+            --border-radius-lg: 24px;
+            --border-radius-md: 16px;
+            --border-radius-pill: 50px;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto', sans-serif;
+            background-color: #f0f2f5;
+            color: var(--md-sys-color-on-surface);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Header --- */
+        .app-header {
+            background: linear-gradient(135deg, #006492 0%, #004c6d 100%);
+            color: white;
+            padding: 20px 24px;
+            padding-top: 40px; /* Status bar spacing simulation */
+            border-bottom-left-radius: 32px;
+            border-bottom-right-radius: 32px;
+            box-shadow: 0 4px 20px rgba(0, 100, 146, 0.2);
+            z-index: 10;
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .app-title h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .app-title p {
+            margin: 4px 0 0;
+            font-size: 14px;
+            opacity: 0.8;
+            font-weight: 400;
+        }
+
+        .header-icon {
+            font-size: 24px;
+            background: rgba(255,255,255,0.2);
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+
+        /* --- Main Content Area --- */
+        .main-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            padding-bottom: 100px; /* Space for bottom nav */
+            scroll-behavior: smooth;
+        }
+
+        /* Sections */
+        .section {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- Search Bar --- */
+        .search-bar-container {
+            background-color: white;
+            border-radius: var(--border-radius-pill);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border: 1px solid rgba(0,0,0,0.05);
+            transition: box-shadow 0.2s ease;
+        }
+
+        .search-bar-container:focus-within {
+            box-shadow: 0 4px 12px rgba(0,100,146,0.15);
+            border-color: var(--md-sys-color-primary-container);
+        }
+
+        .search-bar-container input {
+            border: none;
+            background: transparent;
+            font-size: 16px;
+            width: 100%;
+            outline: none;
+            color: var(--md-sys-color-on-surface);
+            font-family: inherit;
+        }
+
+        .search-icon {
+            color: var(--md-sys-color-secondary);
+        }
+
+        /* --- Cards Grid --- */
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 16px;
+        }
+
+        /* --- Tool Card --- */
+        .tool-card {
+            background: var(--md-sys-color-surface);
+            border-radius: var(--border-radius-lg);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            box-shadow: var(--elevation-1);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(0,0,0,0.03);
+            height: 100%;
+            transform: translateZ(0); /* Hardware acceleration */
+        }
+
+        .tool-card:active {
+            transform: scale(0.98);
+            box-shadow: none;
+            background-color: var(--md-sys-color-surface-variant);
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 16px;
+            background-color: var(--md-sys-color-primary-container);
+            color: var(--md-sys-color-on-primary-container);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin-bottom: 16px;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--md-sys-color-on-surface);
+            margin-bottom: 8px;
+            line-height: 1.2;
+        }
+
+        .card-desc {
+            font-size: 13px;
+            color: var(--md-sys-color-secondary);
+            margin-bottom: 20px;
+            line-height: 1.4;
+            flex-grow: 1;
+        }
+
+        .card-btn {
+            background-color: var(--md-sys-color-primary);
+            color: var(--md-sys-color-on-primary);
+            border: none;
+            padding: 8px 20px;
+            border-radius: var(--border-radius-pill);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            width: 100%;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            transition: background 0.2s;
+        }
+
+        .card-btn:hover {
+            background-color: #004c6d;
+        }
+
+        /* --- Favorites Button --- */
+        .fav-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.8);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #9aa0a6;
+            font-size: 18px;
+            z-index: 5;
+            transition: transform 0.2s ease, background 0.2s ease;
+        }
+        
+        .fav-btn:hover {
+            background: rgba(255,255,255,1);
+            transform: scale(1.1);
+        }
+
+        .fav-btn.active {
+            color: #e91e63;
+        }
+
+        /* Subtle Pop Animation */
+        @keyframes heartPop {
+            0% { transform: scale(1); }
+            40% { transform: scale(1.4); }
+            100% { transform: scale(1); }
+        }
+
+        .fav-btn.animate-pop i {
+            animation: heartPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 40px 20px;
+            background: white;
+            border-radius: 24px;
+            color: var(--md-sys-color-secondary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+        .empty-state i {
+            font-size: 40px;
+            opacity: 0.3;
+        }
+
+        /* --- Home Tab Specific --- */
+        .welcome-card {
+            background: white;
+            border-radius: 28px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: var(--elevation-1);
+        }
+        .stats-row {
+            display: flex;
+            gap: 16px;
+            margin-top: 16px;
+        }
+        .stat-item {
+            flex: 1;
+            background: #f0f4f8;
+            padding: 16px;
+            border-radius: 16px;
+            text-align: center;
+        }
+        .stat-val { font-size: 24px; font-weight: 700; color: var(--md-sys-color-primary); }
+        .stat-label { font-size: 12px; color: var(--md-sys-color-secondary); }
+
+        /* --- About Tab --- */
+        .about-content {
+            background: white;
+            padding: 32px;
+            border-radius: 24px;
+            text-align: center;
+            box-shadow: var(--elevation-1);
+        }
+
+        /* --- Bottom Navigation --- */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: var(--md-sys-color-surface);
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 16px 20px; /* Extra padding for iPhone home indicator */
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+            z-index: 100;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 20px;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--md-sys-color-secondary);
+            flex: 1;
+            max-width: 100px;
+        }
+
+        .nav-item.active {
+            color: var(--md-sys-color-on-surface);
+        }
+
+        .nav-icon-container {
+            width: 64px;
+            height: 32px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 4px;
+            transition: background 0.2s ease;
+        }
+
+        .nav-item.active .nav-icon-container {
+            background-color: var(--md-sys-color-primary-container);
+        }
+
+        .nav-icon {
+            font-size: 20px;
+            color: inherit;
+        }
+
+        .nav-item.active .nav-icon {
+            color: var(--md-sys-color-on-primary-container);
+        }
+
+        .nav-label {
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        /* --- Scrollbar Hide --- */
+        ::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
+        }
+
+        /* Ripple Effect */
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            transform: scale(0);
+            animation: ripple 0.6s linear;
+            background-color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .copyright {
+            margin-top: 30px;
+            font-size: 12px;
+            color: #999;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+    </style>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="app-header">
+        <div class="header-content">
+            <div class="app-title">
+                <h1>Exam Toolkit Pro</h1>
+                <p>All Mock Test Engines in One Place</p>
+            </div>
+            <div class="header-icon">
+                <i class="fa-solid fa-graduation-cap"></i>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-container">
+        
+        <!-- HOME TAB -->
+        <div id="tab-home" class="section active">
+            <div class="welcome-card">
+                <h2 style="margin-top: 0; font-size: 20px;">Welcome back!</h2>
+                <p style="color: #666; margin-bottom: 20px;">Ready to start your preparation today?</p>
+                
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <div class="stat-val" id="total-tools-count">10</div>
+                        <div class="stat-label">Total Tools</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-val" id="fav-count">0</div>
+                        <div class="stat-label">Favorites</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3 style="margin: 24px 0 16px; font-size: 18px; color: #444;">Your Favorites</h3>
+            <div id="favorites-grid" class="tools-grid">
+                <!-- Favorites Rendered JS -->
+            </div>
+        </div>
+
+        <!-- TOOLS TAB -->
+        <div id="tab-tools" class="section">
+            <h3 style="margin: 0 0 16px; font-size: 20px; color: #333;">All Engines</h3>
+            
+            <div class="search-bar-container">
+                <i class="fa-solid fa-search search-icon"></i>
+                <input type="text" id="tool-search" placeholder="Search tools by name..." oninput="handleSearch(this.value)">
+            </div>
+
+            <div id="all-tools-grid" class="tools-grid">
+                <!-- Tools Rendered JS -->
+            </div>
+        </div>
+
+        <!-- ABOUT TAB -->
+        <div id="tab-about" class="section">
+            <div class="about-content">
+                <div style="font-size: 48px; color: var(--md-sys-color-primary); margin-bottom: 16px;">
+                    <i class="fa-solid fa-layer-group"></i>
+                </div>
+                <h2 style="margin: 0 0 8px;">Exam Toolkit Pro</h2>
+                <p style="color: #666; margin-bottom: 24px;">Version 4.2.1 (Native Web)</p>
+                <div style="background: #f5f7fa; padding: 16px; border-radius: 12px; text-align: left; font-size: 14px; line-height: 1.6;">
+                    <p><strong>Dev:</strong> Ravindra Kumar</p>
+                    <p><strong>Location:</strong> India</p>
+                    <p><strong>Design:</strong> Material Design 3</p>
+                    <p><strong>Storage:</strong> LocalStorage (Offline)</p>
+                </div>
+                <div class="copyright">
+                    &copy; 2024 Exam Toolkit Pro. All rights reserved.
+                </div>
+                <button class="card-btn" style="margin-top: 24px; background: #333;" onclick="alert('Checking for updates...')">Check Updates</button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('home')">
+            <div class="nav-icon-container">
+                <i class="nav-icon fa-solid fa-house"></i>
+            </div>
+            <span class="nav-label">Home</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('tools')">
+            <div class="nav-icon-container">
+                <i class="nav-icon fa-solid fa-toolbox"></i>
+            </div>
+            <span class="nav-label">Tools</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('about')">
+            <div class="nav-icon-container">
+                <i class="nav-icon fa-solid fa-circle-info"></i>
+            </div>
+            <span class="nav-label">About</span>
+        </div>
+    </nav>
+
+    <script>
+        // --- DATA ---
+        const toolsData = [
+            { id: 'examplanning', title: 'Exam Planning', desc: 'External exam scheduling and planning dashboard.', icon: 'fa-calendar-days', bg: '#e8eaf6', fg: '#283593', url: 'https://exam-planning.netlify.app/' },
+            { id: 'minivscode', title: 'Mini VS Code', desc: 'Lightweight code editor PWA.', icon: 'fa-laptop-code', bg: '#e1f5fe', fg: '#0277bd', url: 'tools/minivscode.html' },
+            { id: 'geminiq3', title: 'Gemini Q3', desc: 'AI-powered question parsing engine.', icon: 'fa-brain', bg: '#e3f2fd', fg: '#1565c0', url: 'tools/geminiq3.html' },
+            { id: 'script5', title: 'Script 5', desc: 'Standard text parser v5.0.', icon: 'fa-code', bg: '#e8f5e9', fg: '#2e7d32', url: 'tools/script5.html' },
+            { id: 'script7', title: 'Script 7', desc: 'Enhanced parsing with better error handling.', icon: 'fa-file-code', bg: '#fff3e0', fg: '#ef6c00', url: 'tools/script7.html' },
+            { id: 'script7split', title: 'Script 7 Split', desc: 'One-sided layout for focused reading.', icon: 'fa-table-columns', bg: '#f3e5f5', fg: '#7b1fa2', url: 'tools/script7oneside.html' },
+            { id: 'script7pro', title: 'Script 7 Pro', desc: 'Upgraded version with modern UI.', icon: 'fa-rocket', bg: '#e0f7fa', fg: '#006064', url: 'tools/script7upgraded.html' },
+            { id: 'tbfixed', title: 'TB Fixed', desc: 'Stable version of Testbook mock engine.', icon: 'fa-book-open', bg: '#ffebee', fg: '#c62828', url: 'tools/Testbook_Mock_Fixed.html' },
+            { id: 'tbadvanced', title: 'TB Advanced', desc: 'Advanced features for TB format.', icon: 'fa-flask', bg: '#fce4ec', fg: '#880e4f', url: 'tools/testbook-fixed-advanced.html' },
+            { id: 'type2save', title: 'Type 2 Save', desc: 'Mock engine with state persistence.', icon: 'fa-floppy-disk', bg: '#e0f2f1', fg: '#004d40', url: 'tools/type2mocksave.html' },
+            { id: 'type2scroll', title: 'Type 2 Scroll', desc: 'Vertical scrolling exam interface.', icon: 'fa-scroll', bg: '#fff8e1', fg: '#ff6f00', url: 'tools/type2mockscroll.html' },
+            { id: 'type2print', title: 'Print View', desc: 'Printer-friendly format generator.', icon: 'fa-print', bg: '#eceff1', fg: '#37474f', url: 'tools/type2mockscrollprint3.html' }
+        ];
+
+        // --- STATE ---
+        let favorites = [];
+        let searchQuery = '';
+        let debounceTimer;
+
+        // --- INIT ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadFavorites();
+            renderApp();
+        });
+
+        // --- FUNCTIONS ---
+
+        function loadFavorites() {
+            const stored = localStorage.getItem('examToolkit_favorites');
+            if (stored) {
+                try {
+                    favorites = JSON.parse(stored);
+                } catch (e) {
+                    favorites = [];
+                }
+            }
+        }
+
+        function saveFavorites() {
+            localStorage.setItem('examToolkit_favorites', JSON.stringify(favorites));
+            updateStats();
+        }
+
+        function toggleFavorite(id, btnElement) {
+            // Prevent other interactions if necessary, though card is click-safe
+            if(event) event.stopPropagation();
+
+            const index = favorites.indexOf(id);
+            const isAdding = index === -1;
+
+            if (isAdding) {
+                favorites.push(id);
+            } else {
+                favorites.splice(index, 1);
+            }
+            saveFavorites();
+
+            // Instant Visual Feedback & Animation on the clicked button
+            if (btnElement) {
+                const icon = btnElement.querySelector('i');
+                
+                // Toggle active state classes
+                if (isAdding) {
+                    btnElement.classList.add('active');
+                    icon.classList.remove('fa-regular');
+                    icon.classList.add('fa-solid');
+                } else {
+                    btnElement.classList.remove('active');
+                    icon.classList.remove('fa-solid');
+                    icon.classList.add('fa-regular');
+                }
+
+                // Trigger Animation: Remove class and re-add to restart animation
+                btnElement.classList.remove('animate-pop');
+                void btnElement.offsetWidth; // Trigger reflow
+                btnElement.classList.add('animate-pop');
+            }
+
+            // Haptic feedback
+            if (navigator.vibrate) navigator.vibrate(50);
+
+            // Delay full re-render slightly so user sees the animation 
+            // and the item doesn't disappear from the list instantly
+            setTimeout(() => {
+                renderApp();
+            }, 350);
+        }
+
+        // Optimization: Debounced search to prevent lagging
+        function handleSearch(query) {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                searchQuery = query.toLowerCase();
+                renderApp();
+            }, 150); // 150ms debounce
+        }
+
+        function switchTab(tabId) {
+            // Update Navigation UI
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+
+            // Switch Content
+            document.querySelectorAll('.section').forEach(sec => {
+                sec.classList.remove('active');
+            });
+            document.getElementById('tab-' + tabId).classList.add('active');
+
+            // Scroll to top
+            document.querySelector('.main-container').scrollTop = 0;
+        }
+
+        function renderApp() {
+            // Filter tools based on search query
+            const filteredTools = toolsData.filter(t => 
+                t.title.toLowerCase().includes(searchQuery) || 
+                t.desc.toLowerCase().includes(searchQuery)
+            );
+
+            renderGrid('all-tools-grid', filteredTools);
+            
+            // Favorites should generally show all unless logic dictates otherwise.
+            // For now, favorites stay persistent on Home tab regardless of search on Tools tab.
+            const favTools = toolsData.filter(t => favorites.includes(t.id));
+            renderGrid('favorites-grid', favTools, true);
+
+            updateStats();
+        }
+
+        function renderGrid(containerId, tools, isFavSection = false) {
+            const container = document.getElementById(containerId);
+            // Optimization: If empty list, check if we need to show empty state or just clear
+            if (tools.length === 0) {
+                if (isFavSection) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fa-regular fa-star"></i>
+                            <p>No favorites yet.<br>Star your most used tools!</p>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <p>No tools found matching "${searchQuery}"</p>
+                        </div>
+                    `;
+                }
+                return;
+            }
+
+            // Optimization: Build HTML string first then set innerHTML once to reduce reflows
+            let html = '';
+            tools.forEach(tool => {
+                const isFav = favorites.includes(tool.id);
+                html += `
+                <div class="tool-card">
+                    <button class="fav-btn ${isFav ? 'active' : ''}" onclick="toggleFavorite('${tool.id}', this)">
+                        <i class="${isFav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+                    </button>
+                    <div class="card-icon" style="background: ${tool.bg}; color: ${tool.fg};">
+                        <i class="fa-solid ${tool.icon}"></i>
+                    </div>
+                    <div class="card-title">${tool.title}</div>
+                    <div class="card-desc">${tool.desc}</div>
+                    <a href="${tool.url}" class="card-btn">OPEN</a>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function updateStats() {
+            document.getElementById('total-tools-count').textContent = toolsData.length;
+            document.getElementById('fav-count').textContent = favorites.length;
+        }
+
+        // Add ripple effect to buttons (delegation)
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('card-btn')) {
+                let rect = e.target.getBoundingClientRect();
+                let x = e.clientX - rect.left;
+                let y = e.clientY - rect.top;
+                
+                let ripple = document.createElement('span');
+                ripple.classList.add('ripple');
+                ripple.style.left = x + 'px';
+                ripple.style.top = y + 'px';
+                
+                e.target.appendChild(ripple);
+                
+                setTimeout(() => {
+                    ripple.remove();
+                }, 600);
+            }
+        });
+    </script>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>

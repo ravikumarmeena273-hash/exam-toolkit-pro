@@ -1,0 +1,5 @@
+{
+  "name": "CodePocket PWA",
+  "description": "A professional, offline-capable code and text editor with custom file saving capabilities. Built for speed and reliability.",
+  "requestFramePermissions": []
+}

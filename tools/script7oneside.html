@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Split-Layout Scientific Exam Engine</title>
+
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+    svg: { fontCache: 'global' }
+  };
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<script src="https://unpkg.com/smiles-drawer@2.0.1/dist/smiles-drawer.min.js"></script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+Devanagari:wght@400;700&family=Roboto:wght@400;500;700&display=swap');
+
+@page { size: A4 portrait; margin: 0.4in; }
+body { font-family: "Roboto", "Noto Serif Devanagari", sans-serif; background: #f0f2f5; margin: 0; color: #333; }
+
+/* Control Panel */
+.no-print { background: #fff; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-bottom: 1px solid #ddd; }
+textarea { width: 100%; height: 180px; font-family: monospace; font-size: 13px; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 10px; }
+
+.btn-bar { display: flex; gap: 10px; flex-wrap: wrap; }
+button { padding: 10px 20px; cursor: pointer; border: none; border-radius: 6px; font-weight: 600; color: white; transition: 0.2s; }
+.btn-blue { background: #007bff; } .btn-blue:hover { background: #0056b3; }
+.btn-green { background: #28a745; } .btn-green:hover { background: #218838; }
+.btn-fix { background: #ffc107; color: #000; } .btn-fix:hover { background: #e0a800; }
+
+/* Paper Layout Container */
+.paper-container { background: white; width: 210mm; min-height: 297mm; margin: 20px auto; padding: 15mm 10mm; box-shadow: 0 0 20px rgba(0,0,0,0.05); position: relative; }
+
+.header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; margin-bottom: 20px; padding-bottom: 10px; font-weight: bold; font-size: 18px; text-transform: uppercase; width: 100%; }
+
+/* --- UPDATED: SPLIT COLUMN LAYOUT CSS --- */
+.paper-content { 
+    position: relative; 
+    /* No column-count here anymore because we want a split view */
+}
+
+/* The Vertical Line Divider */
+.paper-bg-line {
+    position: absolute;
+    top: 0; bottom: 0; left: 50%;
+    border-left: 1.5px dashed #ccc;
+    z-index: 0;
+    pointer-events: none;
+}
+/* Rough Work Label */
+.paper-bg-label {
+    position: absolute;
+    top: 10px; left: 52%;
+    color: #ddd; font-weight: bold; 
+    font-size: 14px; letter-spacing: 2px;
+    transform: rotate(0deg);
+}
+
+/* Question Blocks - Restricted to 48% Width (Left Side) */
+.block { 
+    width: 48%; /* Only take up half the page */
+    margin-bottom: 25px; 
+    padding-bottom: 15px; 
+    border-bottom: 1px solid #eee; 
+    break-inside: avoid; /* Prevent splitting across pages */
+    position: relative;
+    z-index: 1;
+}
+
+.q-row { display: flex; gap: 8px; align-items: baseline; }
+.q-no { font-weight: 900; color: #d63384; min-width: 30px; }
+.q-text { font-weight: 500; text-align: justify; }
+
+.options { margin: 8px 0 0 35px; font-size: 14px; }
+.opt { margin-bottom: 6px; display: block; }
+
+/* Canvas for Structures */
+canvas.chem-struct { vertical-align: middle; border: 1px solid #f0f0f0; border-radius: 4px; background: #fff; margin: 5px; display: block; max-width: 100%; }
+.img-placeholder { display: inline-block; background: #ffeeba; border: 1px dashed #d39e00; padding: 10px; color: #856404; font-size: 12px; border-radius: 4px; margin: 5px 0; width: 90%; text-align: center; }
+
+/* Answers */
+.ans-box { background: #f1f8ff; border-left: 4px solid #007bff; padding: 10px; margin-top: 10px; border-radius: 0 4px 4px 0; font-size: 13px; display: none; }
+.label { font-weight: bold; color: #0056b3; }
+
+/* Answer Key Page - Remains Full Width Grid */
+.key-page { break-before: page; margin-top: 30px; width: 100%; }
+.key-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+.key-item { background: #fff; border: 1px solid #ddd; padding: 10px; border-radius: 4px; font-size: 12px; }
+
+@media print {
+  body { background: white; }
+  .no-print { display: none; }
+  .paper-container { width: 100%; box-shadow: none; margin: 0; padding: 0.5in; border: none; }
+  /* Ensure background graphics (the line) print */
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  
+  /* Reset height for multipage printing */
+  .paper-bg-line { bottom: auto; height: 100%; }
+}
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  <h2 style="margin:0 0 10px 0;">🧪 Split-Column Exam Engine (Questions Left | Blank Right)</h2>
+  <textarea id="inputText" placeholder="Paste Gemini Output here (with [SMILES: ...] codes)..."></textarea>
+  
+  <div class="btn-bar">
+    <button class="btn-fix" onclick="autoFix()">🛠️ Auto-Fix Formatting</button>
+    <button class="btn-blue" onclick="render(1)">Mode 1: Show Answers (Study)</button>
+    <button class="btn-blue" onclick="render(2)">Mode 2: Paper + Answer Key</button>
+    <button class="btn-blue" onclick="render(0)">Mode 3: Question Paper Only</button>
+    <button class="btn-green" onclick="window.print()">🖨️ Print PDF</button>
+  </div>
+</div>
+
+<div class="paper-container">
+  <div class="header">
+    <div>Advanced Mock Test</div>
+    <div>Marks: 300</div>
+  </div>
+  
+  <div class="paper-bg-line"></div>
+  <div class="paper-bg-label">ROUGH WORK / SPACE FOR CALCULATION</div>
+  
+  <div class="paper-content" id="paper"></div>
+</div>
+
+<script>
+// 🔹 1. Text Fixer Logic
+function autoFix() {
+    let text = document.getElementById("inputText").value;
+    text = text.replace(/━+/g, '');
+    text = text.replace(/(?<!\n)###Q/g, '\n###Q');
+    text = text.replace(/(?<!\n)##([A-E])/g, '\n##$1');
+    text = text.replace(/###ANS\s*:\s*/g, '\n###ANS: ');
+    document.getElementById("inputText").value = text;
+    alert("Formatting Fixed! Now click a Render Mode.");
+}
+
+// 🔹 2. Rendering Logic
+function render(mode) {
+    const raw = document.getElementById("inputText").value;
+    const paper = document.getElementById("paper");
+    paper.innerHTML = "";
+    
+    // Check if empty
+    if(!raw.trim()) { alert("Please paste text first!"); return; }
+
+    const blocks = raw.split(/###Q/).slice(1);
+    let keyHTML = "";
+
+    blocks.forEach((block, index) => {
+        let qNum = block.match(/^\s*(\d+)/)?.[1] || (index + 1);
+        let cleanBlock = block.replace(/^\s*\d+/, '').trim();
+
+        let parts = cleanBlock.split('###ANS');
+        let qContent = parts[0];
+        let ansContent = parts[1] ? '###ANS' + parts[1] : "";
+
+        const format = (str) => {
+            if(!str) return "";
+            str = str.replace(/\[SMILES:\s*([^\]]+)\]/g, (match, smile) => {
+                let id = 'canvas_' + Math.random().toString(36).substr(2, 9);
+                setTimeout(() => drawSmiles(id, smile), 100);
+                return `<canvas id="${id}" class="chem-struct" width="150" height="100"></canvas>`;
+            });
+            str = str.replace(/\[IMAGE_REQUIRED\]/g, 
+                `<div class="img-placeholder">📸 [Diagram Required]</div>`);
+            return str.replace(/\n/g, "<br>");
+        };
+
+        const getOpt = (tag) => {
+            let m = qContent.match(new RegExp(`##${tag}([^#]*)`, 'i'));
+            return m ? m[1].split(/##[A-E]/)[0].trim() : null;
+        };
+
+        let optA = getOpt('A');
+        let optB = getOpt('B');
+        let optC = getOpt('C');
+        let optD = getOpt('D');
+        let optE = getOpt('E');
+
+        let qText = qContent.split(/##[A-E]/)[0].trim();
+
+        let ansVal = "", expVal = "";
+        if (ansContent) {
+            let ap = ansContent.split('###EXP');
+            ansVal = ap[0].replace('###ANS', '').replace(/^[:\s\(\)]+/g, '').replace(/[\(\)]/g, '').trim();
+            expVal = ap[1] ? ap[1].trim() : "";
+        }
+
+        // --- RENDER HTML BLOCK ---
+        let div = document.createElement("div");
+        div.className = "block"; // This class now forces 48% width
+        
+        let html = `
+            <div class="q-row">
+                <div class="q-no">Q.${qNum}</div>
+                <div class="q-text">${format(qText)}</div>
+            </div>
+            <div class="options">
+                ${optA ? `<span class="opt"><b>(A)</b> ${format(optA)}</span>` : ''}
+                ${optB ? `<span class="opt"><b>(B)</b> ${format(optB)}</span>` : ''}
+                ${optC ? `<span class="opt"><b>(C)</b> ${format(optC)}</span>` : ''}
+                ${optD ? `<span class="opt"><b>(D)</b> ${format(optD)}</span>` : ''}
+                ${optE ? `<span class="opt"><b>(E)</b> ${format(optE)}</span>` : ''}
+            </div>
+        `;
+
+        if (mode === 1) {
+            html += `
+                <div class="ans-box" style="display:block">
+                    <div><span class="label">उत्तर:</span> (${ansVal})</div>
+                    <div style="margin-top:5px"><span class="label">व्याख्या:</span> ${format(expVal)}</div>
+                </div>
+            `;
+        }
+        
+        div.innerHTML = html;
+        paper.appendChild(div);
+
+        // Add to Key Data
+        if (mode === 2) {
+            keyHTML += `
+                <div class="key-item">
+                    <b>Q.${qNum}</b>: (${ansVal})<br>
+                    <span style="color:#555; font-size:11px">${format(expVal)}</span>
+                </div>
+            `;
+        }
+    });
+
+    // If Mode 2, append the Key Page at the very end
+    if (mode === 2) {
+        let keyDiv = document.createElement("div");
+        keyDiv.className = "key-page";
+        // Remove the split line visual for the key page if desired, or keep it.
+        // The Key Grid CSS will override the "block" width limitation.
+        keyDiv.innerHTML = `
+            <h3 style="border-bottom:2px solid #333; padding-bottom:5px; margin-top:0;">Answer Key & Explanations</h3>
+            <div class="key-grid">${keyHTML}</div>
+        `;
+        paper.appendChild(keyDiv);
+    }
+
+    if (window.MathJax) {
+        MathJax.typesetPromise([paper]).catch(err => console.log(err));
+    }
+}
+
+// 🔹 3. Chemical Drawing Function
+function drawSmiles(canvasId, smileString) {
+    let options = { 
+        width: 150, height: 100, bondThickness: 1.2, padding: 5.0, textColor: '#000000'
+    };
+    let smilesDrawer = new SmilesDrawer.Drawer(options);
+    SmilesDrawer.parse(smileString, function(tree) {
+        smilesDrawer.draw(tree, canvasId, 'light', false);
+    }, function(err) { console.log("Smiles Error:", err); });
+}
+</script>
+
+</body>
+</html>

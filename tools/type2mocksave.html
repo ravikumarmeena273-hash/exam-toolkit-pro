@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mock Test Generator (Copy Code Version)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        window.MathJax = {
+            tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans Devanagari', sans-serif; background-color: #f3f4f6; }
+        .palette-grid::-webkit-scrollbar { width: 6px; }
+        .palette-grid::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <div id="setup-panel" class="container mx-auto p-4 max-w-4xl">
+        <div class="bg-white rounded-xl shadow-lg p-6 border-t-4 border-blue-600">
+            <h1 class="text-2xl font-bold text-gray-800 mb-6 text-center">Mock Test Generator</h1>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700">Exam Title</label>
+                    <input type="text" id="config-title" class="w-full border p-2 rounded mt-1" value="My Mock Test">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700">Time (Minutes)</label>
+                    <input type="number" id="config-time" class="w-full border p-2 rounded mt-1" value="20">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 text-green-600">Marks (+)</label>
+                    <input type="number" id="config-pos-mark" class="w-full border p-2 rounded mt-1" value="1">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 text-red-600">Negative (-)</label>
+                    <input type="number" id="config-neg-mark" class="w-full border p-2 rounded mt-1" value="0.25">
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Paste Question Data (###### Format)</label>
+                <textarea id="raw-data" class="w-full h-64 border p-3 rounded font-mono text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Paste your text starting with ######Q here..."></textarea>
+            </div>
+
+            <div class="flex gap-4">
+                <button onclick="parseAndStart()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-md transition-colors">
+                    Start Test Now / अभी शुरू करें
+                </button>
+                <button onclick="generateCode()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-lg shadow-md transition-colors flex justify-center items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                    Get HTML Code / कोड प्राप्त करें
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="code-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <div class="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-xl">
+                <div>
+                    <h3 class="font-bold text-lg text-gray-800">Generated HTML Code</h3>
+                    <p class="text-xs text-gray-500">Copy this code and save it as an <b>.html</b> file.</p>
+                </div>
+                <button onclick="document.getElementById('code-modal').classList.add('hidden')" class="text-gray-500 hover:text-red-500 font-bold px-3 py-1">✕ Close</button>
+            </div>
+            <div class="p-4 flex-1 overflow-hidden">
+                <textarea id="output-code" class="w-full h-full border p-4 font-mono text-xs bg-gray-900 text-green-400 rounded resize-none focus:outline-none" readonly></textarea>
+            </div>
+            <div class="p-4 border-t bg-gray-50 rounded-b-xl">
+                <button onclick="copyToClipboard()" id="copy-btn" class="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 font-bold transition-colors">
+                    Copy Code to Clipboard / कोड कॉपी करें
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="exam-interface" class="hidden w-full h-screen flex flex-col">
+        <header class="bg-white shadow-md p-4 flex justify-between items-center z-10 sticky top-0">
+            <h2 id="display-title" class="font-bold text-lg md:text-xl truncate max-w-xs">Test</h2>
+            <div class="flex items-center gap-4">
+                <div class="bg-gray-100 px-4 py-2 rounded-lg font-mono font-bold text-gray-700 border border-gray-300">
+                    ⏱️ <span id="timer-display">00:00</span>
+                </div>
+                <button onclick="submitExam()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 font-semibold text-sm">Submit</button>
+            </div>
+        </header>
+        <div class="flex flex-1 overflow-hidden">
+            <main class="flex-1 overflow-y-auto p-4 md:p-8" id="question-area">
+                <div class="max-w-3xl mx-auto">
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 min-h-[300px]">
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">Q. <span id="q-number">1</span></span>
+                            <span class="text-gray-400 text-xs">+<span id="display-pos">1</span>, -<span id="display-neg">0.25</span></span>
+                        </div>
+                        <div id="q-text" class="text-lg text-gray-800 font-medium mb-6 leading-relaxed"></div>
+                        <div id="options-container" class="space-y-3"></div>
+                    </div>
+                    <div class="flex justify-between mt-6">
+                        <button onclick="prevQuestion()" id="btn-prev" class="bg-gray-200 text-gray-700 px-6 py-2 rounded hover:bg-gray-300 disabled:opacity-50">Previous</button>
+                        <button onclick="nextQuestion()" id="btn-next" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">Next</button>
+                    </div>
+                </div>
+            </main>
+            <aside class="w-20 md:w-64 bg-white border-l border-gray-200 flex flex-col hidden md:flex">
+                <div class="p-4 border-b font-semibold text-gray-600">Questions</div>
+                <div id="palette-grid" class="flex-1 overflow-y-auto p-4 grid grid-cols-1 md:grid-cols-4 gap-2 content-start palette-grid"></div>
+            </aside>
+        </div>
+    </div>
+
+    <div id="result-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col">
+            <div class="p-6 border-b bg-gray-50"><h2 class="text-2xl font-bold text-center text-gray-800">Result</h2></div>
+            <div class="p-6 grid grid-cols-3 gap-4 text-center">
+                <div class="bg-blue-50 p-4 rounded-lg"><div class="text-2xl font-bold text-blue-600" id="res-score">0</div><div class="text-xs text-gray-500">Score</div></div>
+                <div class="bg-green-50 p-4 rounded-lg"><div class="text-2xl font-bold text-green-600" id="res-correct">0</div><div class="text-xs text-gray-500">Correct</div></div>
+                <div class="bg-red-50 p-4 rounded-lg"><div class="text-2xl font-bold text-red-600" id="res-incorrect">0</div><div class="text-xs text-gray-500">Incorrect</div></div>
+            </div>
+            <div class="px-6 pb-6 flex gap-3">
+                <button onclick="reviewSolutions()" class="flex-1 bg-gray-800 text-white py-3 rounded-lg hover:bg-gray-900">Review</button>
+                <button onclick="location.reload()" class="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg hover:bg-gray-300">Restart</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- GLOBAL VARIABLES ---
+        let questions = [];
+        let currentQIndex = 0;
+        let userAnswers = {};
+        let examTimer;
+        let timeRemaining;
+        let isExamActive = false;
+        let isReviewMode = false;
+        let config = { posMark: 1, negMark: 0.25, title: "Test", timeMin: 20 };
+
+        // --- DATA PARSER ---
+        function parseData() {
+            const rawText = document.getElementById('raw-data').value;
+            config.title = document.getElementById('config-title').value;
+            config.timeMin = parseFloat(document.getElementById('config-time').value);
+            config.posMark = parseFloat(document.getElementById('config-pos-mark').value);
+            config.negMark = parseFloat(document.getElementById('config-neg-mark').value);
+
+            if(!rawText.trim()) return null;
+
+            const splitRegex = /######\s*(?:Q|Question|Prashn|प्रश्न|q)?\s*\d*[\.:]?\s*/i;
+            const rawBlocks = rawText.split(splitRegex).filter(b => b.trim().length > 0);
+
+            return rawBlocks.map((block, index) => {
+                const optionRegex = /###[A-E]\s/i;
+                const match = block.match(optionRegex);
+                let qText = match ? block.substring(0, match.index).trim() : block;
+                let rest = match ? block.substring(match.index) : "";
+
+                const options = {};
+                ['A', 'B', 'C', 'D', 'E'].forEach(opt => {
+                    const pattern = new RegExp(`###${opt}\\s+([^#]*)`, 'i');
+                    const optMatch = rest.match(pattern);
+                    if (optMatch) options[opt] = optMatch[1].trim();
+                });
+
+                const ansMatch = rest.match(/####ANS:\s*([A-E])/i);
+                const expMatch = rest.match(/#####EXP:\s*([\s\S]*)/i);
+
+                for(let k in options) options[k] = options[k].replace(/####ANS:[\s\S]*/, '').replace(/#####EXP:[\s\S]*/, '').trim();
+
+                return {
+                    id: index + 1,
+                    text: qText,
+                    options: options,
+                    correct: ansMatch ? ansMatch[1].toUpperCase() : null,
+                    explanation: expMatch ? expMatch[1].trim() : "No explanation."
+                };
+            }).filter(q => Object.keys(q.options).length > 0);
+        }
+
+        // --- PREVIEW EXAM ---
+        function parseAndStart() {
+            const parsed = parseData();
+            if(!parsed || parsed.length === 0) { alert("Please paste valid question data."); return; }
+            questions = parsed;
+            document.getElementById('setup-panel').classList.add('hidden');
+            document.getElementById('exam-interface').classList.remove('hidden');
+            document.getElementById('display-title').innerText = config.title;
+            document.getElementById('display-pos').innerText = config.posMark;
+            document.getElementById('display-neg').innerText = config.negMark;
+            timeRemaining = config.timeMin * 60;
+            isExamActive = true;
+            generatePalette();
+            renderQuestion(0);
+            startTimer();
+        }
+
+        // --- CODE GENERATOR ---
+        function generateCode() {
+            const parsed = parseData();
+            if(!parsed || parsed.length === 0) { alert("Paste data first!"); return; }
+
+            // Safe String Construction to avoid breaking script tags
+            const scriptOpen = "<" + "script>";
+            const scriptClose = "<" + "/script>";
+
+            const fullHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>${config.title}</title>
+<script src="https://cdn.tailwindcss.com">${scriptClose}
+${scriptOpen}window.MathJax={tex:{inlineMath:[['$','$'],['\\\\(','\\\\)']]},svg:{fontCache:'global'}};${scriptClose}
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">${scriptClose}
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;700&display=swap" rel="stylesheet">
+<style>body{font-family:'Noto Sans Devanagari',sans-serif;background-color:#f3f4f6}.palette-grid::-webkit-scrollbar{width:6px}.palette-grid::-webkit-scrollbar-thumb{background-color:#cbd5e1;border-radius:4px}</style>
+</head>
+<body class="min-h-screen flex flex-col">
+<div id="exam-interface" class="w-full h-screen flex flex-col">
+    <header class="bg-white shadow-md p-4 flex justify-between items-center z-10 sticky top-0">
+        <h2 class="font-bold text-lg md:text-xl truncate max-w-xs">${config.title}</h2>
+        <div class="flex items-center gap-4">
+            <div class="bg-gray-100 px-4 py-2 rounded-lg font-mono font-bold text-gray-700 border border-gray-300">⏱️ <span id="timer-display">00:00</span></div>
+            <button onclick="submitExam()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 font-semibold text-sm">Submit</button>
+        </div>
+    </header>
+    <div class="flex flex-1 overflow-hidden">
+        <main class="flex-1 overflow-y-auto p-4 md:p-8" id="question-area">
+            <div class="max-w-3xl mx-auto">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 min-h-[300px]">
+                    <div class="flex justify-between items-start mb-4"><span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">Q. <span id="q-number">1</span></span><span class="text-gray-400 text-xs">+${config.posMark}, -${config.negMark}</span></div>
+                    <div id="q-text" class="text-lg text-gray-800 font-medium mb-6 leading-relaxed"></div>
+                    <div id="options-container" class="space-y-3"></div>
+                </div>
+                <div class="flex justify-between mt-6"><button onclick="prevQuestion()" id="btn-prev" class="bg-gray-200 text-gray-700 px-6 py-2 rounded hover:bg-gray-300 disabled:opacity-50">Previous</button><button onclick="nextQuestion()" id="btn-next" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">Next</button></div>
+            </div>
+        </main>
+        <aside class="w-20 md:w-64 bg-white border-l border-gray-200 flex flex-col hidden md:flex"><div class="p-4 border-b font-semibold text-gray-600">Questions</div><div id="palette-grid" class="flex-1 overflow-y-auto p-4 grid grid-cols-1 md:grid-cols-4 gap-2 content-start palette-grid"></div></aside>
+    </div>
+</div>
+<div id="result-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"><div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col"><div class="p-6 border-b bg-gray-50"><h2 class="text-2xl font-bold text-center text-gray-800">Result</h2></div><div class="p-6 grid grid-cols-3 gap-4 text-center"><div class="bg-blue-50 p-4 rounded-lg"><div class="text-2xl font-bold text-blue-600" id="res-score">0</div><div class="text-xs text-gray-500">Score</div></div><div class="bg-green-50 p-4 rounded-lg"><div class="text-2xl font-bold text-green-600" id="res-correct">0</div><div class="text-xs text-gray-500">Correct</div></div><div class="bg-red-50 p-4 rounded-lg"><div class="text-2xl font-bold text-red-600" id="res-incorrect">0</div><div class="text-xs text-gray-500">Incorrect</div></div></div><div class="px-6 pb-6 flex gap-3"><button onclick="reviewSolutions()" class="flex-1 bg-gray-800 text-white py-3 rounded-lg hover:bg-gray-900">Review</button><button onclick="location.reload()" class="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg hover:bg-gray-300">Restart</button></div></div></div>
+${scriptOpen}
+    const questions = ${JSON.stringify(parsed)};
+    const config = ${JSON.stringify(config)};
+    let currentQIndex = 0;
+    let userAnswers = {};
+    let examTimer;
+    let timeRemaining = config.timeMin * 60;
+    let isExamActive = true;
+    let isReviewMode = false;
+
+    window.onload = function() {
+        generatePalette();
+        renderQuestion(0);
+        startTimer();
+    };
+
+    ${renderQuestion.toString()}
+    ${nextQuestion.toString()}
+    ${prevQuestion.toString()}
+    ${generatePalette.toString()}
+    ${updatePalette.toString()}
+    ${startTimer.toString()}
+    ${submitExam.toString()}
+    ${reviewSolutions.toString()}
+${scriptClose}
+</body>
+</html>`;
+
+            document.getElementById('output-code').value = fullHtml;
+            document.getElementById('code-modal').classList.remove('hidden');
+        }
+
+        function copyToClipboard() {
+            const textArea = document.getElementById('output-code');
+            textArea.select();
+            document.execCommand('copy');
+            const btn = document.getElementById('copy-btn');
+            btn.innerText = "Copied! / कॉपी कर लिया गया!";
+            btn.classList.replace('bg-indigo-600', 'bg-green-600');
+            setTimeout(() => {
+                btn.innerText = "Copy Code to Clipboard / कोड कॉपी करें";
+                btn.classList.replace('bg-green-600', 'bg-indigo-600');
+            }, 2000);
+        }
+
+        // --- SHARED FUNCTIONS ---
+        function renderQuestion(index) {
+            currentQIndex = index;
+            const q = questions[index];
+            document.getElementById('q-number').innerText = index + 1;
+            let fmtText = q.text.replace(/\[SMILES:\s*(.*?)\]/g, '<code class="bg-gray-100 text-purple-600 px-2 py-1 rounded border">$1</code>').replace(/\n/g, '<br>');
+            document.getElementById('q-text').innerHTML = fmtText;
+
+            const container = document.getElementById('options-container');
+            container.innerHTML = '';
+
+            ['A', 'B', 'C', 'D', 'E'].forEach(key => {
+                if(!q.options[key]) return;
+                const btn = document.createElement('div');
+                let cls = "p-4 border rounded-lg cursor-pointer transition-colors flex items-start gap-3 hover:bg-gray-50 ";
+                let isSel = userAnswers[index] === key;
+                
+                if (isReviewMode) {
+                    if (key === q.correct) cls += "bg-green-100 border-green-500 ring-1 ring-green-500";
+                    else if (isSel && key !== q.correct) cls += "bg-red-100 border-red-500";
+                    else cls += "bg-white border-gray-200 opacity-60";
+                } else {
+                    cls += isSel ? "bg-blue-100 border-blue-500 ring-1 ring-blue-500" : "bg-white border-gray-200";
+                }
+
+                btn.className = cls;
+                if(isExamActive) btn.onclick = () => { if(userAnswers[index]===key) delete userAnswers[index]; else userAnswers[index]=key; renderQuestion(index); };
+                btn.innerHTML = `<div class="font-bold text-gray-500 w-6">${key}</div><div class="flex-1">${q.options[key]}</div>`;
+                container.appendChild(btn);
+            });
+
+            if (isReviewMode) {
+                const expBox = document.createElement('div');
+                expBox.className = "mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded text-sm text-gray-800";
+                expBox.innerHTML = `<strong>Explanation:</strong><br>${q.explanation}`;
+                container.appendChild(expBox);
+            }
+
+            document.getElementById('btn-prev').disabled = index === 0;
+            document.getElementById('btn-next').innerText = index === questions.length - 1 ? 'Finish' : 'Next';
+            if(window.MathJax) window.MathJax.typesetPromise([document.getElementById('question-area')]);
+            updatePalette();
+        }
+
+        function nextQuestion() {
+            if(currentQIndex < questions.length - 1) renderQuestion(currentQIndex + 1);
+            else if(confirm("Submit Test?")) submitExam();
+        }
+        function prevQuestion() { if(currentQIndex > 0) renderQuestion(currentQIndex - 1); }
+
+        function generatePalette() {
+            const grid = document.getElementById('palette-grid');
+            grid.innerHTML = '';
+            questions.forEach((q, i) => {
+                const btn = document.createElement('button');
+                btn.id = `pal-${i}`;
+                btn.className = "w-10 h-10 rounded-full border text-xs font-bold flex items-center justify-center bg-white text-gray-600 hover:bg-gray-100";
+                btn.innerText = i + 1;
+                btn.onclick = () => renderQuestion(i);
+                grid.appendChild(btn);
+            });
+        }
+        function updatePalette() {
+            questions.forEach((q, i) => {
+                const btn = document.getElementById(`pal-${i}`);
+                if (!btn) return;
+                let cls = "w-10 h-10 rounded-full border text-xs font-bold flex items-center justify-center transition-colors ";
+                if (i === currentQIndex) cls += "ring-2 ring-blue-600 border-blue-600 ";
+                
+                if (isReviewMode) {
+                    if(userAnswers[i]) cls += (userAnswers[i]===questions[i].correct) ? "bg-green-500 text-white border-green-500" : "bg-red-500 text-white border-red-500";
+                    else cls += "bg-white text-gray-600";
+                } else {
+                    cls += userAnswers[i] ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-600 hover:bg-gray-100";
+                }
+                btn.className = cls;
+            });
+        }
+
+        function startTimer() {
+            const display = document.getElementById('timer-display');
+            examTimer = setInterval(() => {
+                if(timeRemaining <= 0) { clearInterval(examTimer); submitExam(); return; }
+                timeRemaining--;
+                const m = Math.floor(timeRemaining / 60).toString().padStart(2, '0');
+                const s = (timeRemaining % 60).toString().padStart(2, '0');
+                display.innerText = `${m}:${s}`;
+                if(timeRemaining < 60) display.classList.add('text-red-600');
+            }, 1000);
+        }
+
+        function submitExam() {
+            isExamActive = false;
+            clearInterval(examTimer);
+            let correct = 0, incorrect = 0;
+            questions.forEach((q, i) => {
+                if(userAnswers[i] && userAnswers[i] === q.correct) correct++;
+                else if(userAnswers[i]) incorrect++;
+            });
+            document.getElementById('res-score').innerText = ((correct * config.posMark) - (incorrect * config.negMark)).toFixed(2);
+            document.getElementById('res-correct').innerText = correct;
+            document.getElementById('res-incorrect').innerText = incorrect;
+            document.getElementById('result-modal').classList.remove('hidden');
+        }
+
+        function reviewSolutions() {
+            isReviewMode = true;
+            document.getElementById('result-modal').classList.add('hidden');
+            renderQuestion(0);
+        }
+    </script>
+</body>
+</html>

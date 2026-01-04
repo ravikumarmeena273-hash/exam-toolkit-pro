@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<title>RPSC / REET Advanced Exam Engine</title>
+
+<style>
+@page{
+  size:A4 portrait;
+  margin:0.5in;
+}
+
+body{
+  font-family:"Mangal","Nirmala UI","Arial Unicode MS",sans-serif;
+  font-size:13px;
+  line-height:1.55;
+}
+
+/* ===== INPUT CONTROLS ===== */
+.controls textarea{
+  width:100%;
+  height:260px;
+  font-family:monospace;
+  font-size:12px;
+}
+button{ margin:6px 8px 8px 0; padding:4px 10px; }
+
+/* ===== HEADER ===== */
+.header{
+  display:flex;
+  justify-content:space-between;
+  font-weight:bold;
+  border-bottom:2px solid #000;
+  margin-bottom:10px;
+}
+
+/* ===== TWO COLUMN LAYOUT ===== */
+.paper{
+  column-count:2;
+  column-gap:22px;
+  column-rule:1px solid #000;
+}
+
+/* ===== QUESTION BLOCK ===== */
+.block{
+  break-inside:avoid;
+  page-break-inside:avoid;
+  margin-bottom:14px;
+}
+
+.qno{ font-weight:bold; margin-bottom:4px; }
+.options{ margin-left:16px; }
+
+/* ===== ANSWER ===== */
+.answer{
+  display:none;
+  border-top:1px dashed #000;
+  margin-top:6px;
+  padding-top:4px;
+}
+
+/* ===== ALL ANSWERS PAGE ===== */
+.all-answers{
+  column-span:all;
+  page-break-before:always;
+}
+
+/* ===== PRINT ===== */
+@media print{
+  .controls{ display:none; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="controls">
+<textarea id="inputText" placeholder="यहाँ Gemini / ChatGPT का पूरा output paste करें
+(###Q 1, ##A–##E, ###ANS, ###EXP सहित)"></textarea><br>
+
+<button onclick="render(1)">Mode-1: Answer After Each</button>
+<button onclick="render(2)">Mode-2: All Answers at End</button>
+<button onclick="window.print()">Print / Save PDF</button>
+</div>
+
+<div class="header">
+  <div>तृतीय श्रेणी शिक्षक (L-2) मुख्य परीक्षा-2025 | मॉक टेस्ट</div>
+  <div>समय: 2:30 घंटे | पूर्णांक: 300</div>
+</div>
+
+<div class="paper" id="paper"></div>
+
+<script>
+function render(mode){
+  const raw = document.getElementById("inputText").value;
+  const paper = document.getElementById("paper");
+  paper.innerHTML = "";
+
+  // 🔹 split on ###Q with optional number
+  const blocks = raw.split(/###Q\s*\d*/).filter(b => b.trim());
+
+  let allAnswersHTML = "";
+  let qCounter = 1;
+
+  blocks.forEach(block => {
+
+    const qPart = block.split("###ANS")[0]?.trim() || "";
+    const ansPart = block.split("###ANS")[1] || "";
+
+    const answer = ansPart.split("###EXP")[0]?.replace(":","").trim() || "";
+    const expText = ansPart.split("###EXP")[1]?.trim() || "";
+
+    const questionText = qPart.split("##A")[0].trim();
+
+    const opt = {
+      A:(qPart.split("##A")[1]||"").split("##B")[0].trim(),
+      B:(qPart.split("##B")[1]||"").split("##C")[0].trim(),
+      C:(qPart.split("##C")[1]||"").split("##D")[0].trim(),
+      D:(qPart.split("##D")[1]||"").split("##E")[0].trim(),
+      E:(qPart.split("##E")[1]||"").trim()
+    };
+
+    const div = document.createElement("div");
+    div.className = "block";
+    div.innerHTML = `
+      <div class="qno">प्रश्न ${qCounter}</div>
+      <div>${questionText.replace(/\n/g,"<br>")}</div>
+      <div class="options">
+        (A) ${opt.A}<br>
+        (B) ${opt.B}<br>
+        (C) ${opt.C}<br>
+        (D) ${opt.D}<br>
+        (E) ${opt.E}
+      </div>
+      <div class="answer">
+        <b>उत्तर:</b> ${answer}<br>
+        <b>व्याख्या:</b> ${expText.replace(/\n/g,"<br>")}
+      </div>
+    `;
+    paper.appendChild(div);
+
+    allAnswersHTML += `
+      <div class="block">
+        <b>प्रश्न ${qCounter} उत्तर:</b> ${answer}<br>
+        <b>व्याख्या:</b> ${expText.replace(/\n/g,"<br>")}
+      </div>
+    `;
+
+    qCounter++;
+  });
+
+  if(mode === 1){
+    document.querySelectorAll(".answer")
+      .forEach(a => a.style.display = "block");
+  }
+
+  if(mode === 2){
+    paper.innerHTML += `
+      <div class="all-answers">
+        <h3>उत्तर-व्याख्या</h3>
+        ${allAnswersHTML}
+      </div>
+    `;
+  }
+}
+</script>
+
+</body>
+</html>
