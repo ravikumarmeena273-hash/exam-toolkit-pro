@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PWA Code Editor</title>
+    <meta name="theme-color" content="#ffffff">
+    
+    <link rel="manifest" href='data:application/manifest+json;base64,eyJuYW1lIjoiTW9uYWNvIExpdGUiLCJzaG9ydF9uYW1lIjoiRWRpdG9yIiwic3RhcnRfdXJsIjoiLiIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiNmZmZmZmYiLCJ0aGVtZV9jb2xvciI6IiNmZmZmZmYiLCJpY29ucyI6W3sic3JjIjoiaHR0cHM6Ly9jZG4taWNvbnMtcG5nLmZsYXRpY29uLmNvbS81MTIvMTE1Ny8xMTU3MTA5LnBuZyIsInR5cGVzIjoiaW1hZ2UvcG5nIiwic2l6ZXMiOiI1MTJ4NTEyIn1dfQ=='>
+
+    <style>
+        /* --- CSS RESET & BASE --- */
+        * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; overflow: hidden; background: #f5f5f5; }
+
+        /* --- LAYOUT --- */
+        .app-container { display: flex; flex-direction: column; height: 100vh; }
+        
+        /* --- HEADER --- */
+        header { 
+            display: flex; align-items: center; justify-content: space-between; 
+            background: #fff; height: 56px; padding: 0 16px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 10;
+        }
+        .file-info { display: flex; flex-direction: column; width: 70%; }
+        .filename { font-weight: 600; font-size: 16px; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .filepath { font-size: 10px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        .menu-btn { 
+            background: none; border: none; font-size: 24px; cursor: pointer; color: #555; padding: 8px;
+        }
+
+        /* --- EDITOR AREA --- */
+        .editor-wrapper { flex: 1; position: relative; display: flex; overflow: hidden; background: #fff; }
+        
+        /* Line Numbers */
+        .line-numbers {
+            width: 40px; background: #f0f0f0; color: #999; 
+            text-align: right; padding: 10px 5px; font-family: 'Courier New', monospace; 
+            font-size: 14px; line-height: 1.5; overflow: hidden; user-select: none;
+            border-right: 1px solid #ddd;
+        }
+
+        /* Text Area */
+        #code-editor {
+            flex: 1; border: none; padding: 10px; font-family: 'Courier New', monospace; 
+            font-size: 14px; line-height: 1.5; resize: none; white-space: pre; 
+            overflow: auto; color: #222; background: transparent;
+        }
+
+        /* --- MENU DROPDOWN --- */
+        #menu-dropdown {
+            position: absolute; top: 0; right: 0; width: 220px; height: 100vh;
+            background: #fff; box-shadow: -2px 0 10px rgba(0,0,0,0.2);
+            transform: translateX(100%); transition: transform 0.3s ease;
+            z-index: 20; display: flex; flex-direction: column;
+        }
+        #menu-dropdown.open { transform: translateX(0); }
+        
+        .menu-header { padding: 20px; background: #f9f9f9; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 10px;}
+        .menu-item {
+            padding: 15px 20px; border-bottom: 1px solid #f0f0f0; cursor: pointer; 
+            display: flex; align-items: center; gap: 15px; color: #444; font-size: 15px;
+        }
+        .menu-item:active { background: #e8f5e9; }
+        .menu-item i { width: 20px; text-align: center; color: #666; }
+        .menu-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.3); z-index: 15; display: none;
+        }
+        .menu-overlay.show { display: block; }
+
+        /* --- MODALS --- */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.5); z-index: 50; opacity: 0; pointer-events: none;
+            transition: opacity 0.2s;
+        }
+        .modal.active { opacity: 1; pointer-events: auto; }
+        .modal-content {
+            background: #fff; width: 85%; max-width: 320px; padding: 20px; 
+            border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .modal-title { font-size: 18px; font-weight: bold; color: #2e7d32; margin-bottom: 15px; }
+        
+        /* Form Elements */
+        .input-group { margin-bottom: 15px; position: relative;}
+        .input-group label { display: block; font-size: 12px; color: #666; margin-bottom: 5px; }
+        .text-input { 
+            width: 100%; border: none; border-bottom: 1px solid #2e7d32; 
+            padding: 8px 0; font-size: 16px; background: transparent;
+        }
+        .ext-dropdown {
+            position: absolute; right: 0; bottom: 5px; background: #fff;
+            border: 1px solid #ddd; border-radius: 4px; max-height: 150px; overflow-y: auto;
+            display: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .ext-dropdown.show { display: block; }
+        .ext-option { padding: 8px 12px; font-size: 14px; }
+        .ext-option:active { background: #eee; }
+
+        .modal-actions { display: flex; justify-content: flex-end; gap: 15px; margin-top: 20px; }
+        .btn { border: none; background: none; font-weight: bold; cursor: pointer; padding: 8px 12px; border-radius: 4px; }
+        .btn-cancel { color: #666; }
+        .btn-ok { color: #2e7d32; }
+
+        /* Icon Font fallback (using simple text characters if icons fail, but SVG is safer) */
+        .icon { font-style: normal; }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <header>
+            <div class="file-info">
+                <div class="filename" id="display-filename">untitled1.html</div>
+                <div class="filepath" id="display-path">/storage/emulated/0/</div>
+            </div>
+            <button class="menu-btn" onclick="toggleMenu()">&#9776;</button>
+        </header>
+
+        <div class="editor-wrapper">
+            <div class="line-numbers" id="line-numbers">1</div>
+            <textarea id="code-editor" spellcheck="false" placeholder="Start coding..."></textarea>
+        </div>
+    </div>
+
+    <div class="menu-overlay" id="menu-overlay" onclick="toggleMenu()"></div>
+
+    <div id="menu-dropdown">
+        <div class="menu-header">
+            <strong>Options</strong>
+        </div>
+        <div class="menu-item" onclick="handleNew()"><span>+</span> New</div>
+        <div class="menu-item" onclick="handleOpen()"><span>&#128193;</span> Open (SAF)</div>
+        <div class="menu-item" onclick="handleSave()"><span>&#128190;</span> Save</div>
+        <div class="menu-item" onclick="showSaveAsModal()"><span>&#128190;</span> Save As</div>
+        <div class="menu-item" onclick="window.location.reload()"><span>&#8635;</span> Reload</div>
+        <div class="menu-item" onclick="window.close()"><span>&times;</span> Close</div>
+    </div>
+
+    <div class="modal" id="save-modal">
+        <div class="modal-content">
+            <div class="modal-title">Save As</div>
+            
+            <div class="input-group">
+                <label>File Name:</label>
+                <div style="display: flex; align-items: baseline;">
+                    <input type="text" id="filename-input" class="text-input" value="untitled1">
+                    <span id="ext-trigger" style="color:#666; padding:0 5px; cursor:pointer;" onclick="toggleExtDropdown()">.html &#9662;</span>
+                </div>
+                <div class="ext-dropdown" id="ext-list">
+                    <div class="ext-option" onclick="setExt('html')">html</div>
+                    <div class="ext-option" onclick="setExt('htm')">htm</div>
+                    <div class="ext-option" onclick="setExt('css')">css</div>
+                    <div class="ext-option" onclick="setExt('js')">js</div>
+                    <div class="ext-option" onclick="setExt('txt')">txt</div>
+                    <div class="ext-option" onclick="setExt('json')">json</div>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>Encoding:</label>
+                <input type="text" class="text-input" value="UTF-8" readonly style="color:#999;">
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-cancel" onclick="closeModal()">CANCEL</button>
+                <button class="btn btn-ok" onclick="executeSaveAs()">SAVE</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- VARIABLES ---
+        const editor = document.getElementById('code-editor');
+        const lineNumbers = document.getElementById('line-numbers');
+        const displayFilename = document.getElementById('display-filename');
+        const displayPath = document.getElementById('display-path');
+        let currentFileHandle = null;
+        let currentExtension = 'html';
+
+        // --- EDITOR LOGIC ---
+        // Sync line numbers
+        const updateLineNumbers = () => {
+            const lines = editor.value.split('\n').length;
+            lineNumbers.innerHTML = Array(lines).fill(0).map((_, i) => i + 1).join('<br>');
+        };
+
+        editor.addEventListener('input', updateLineNumbers);
+        editor.addEventListener('scroll', () => {
+            lineNumbers.scrollTop = editor.scrollTop;
+        });
+
+        // Tab support
+        editor.addEventListener('keydown', function(e) {
+            if (e.key == 'Tab') {
+                e.preventDefault();
+                var start = this.selectionStart;
+                var end = this.selectionEnd;
+                this.value = this.value.substring(0, start) + "  " + this.value.substring(end);
+                this.selectionStart = this.selectionEnd = start + 2;
+                updateLineNumbers();
+            }
+        });
+
+        // --- MENU LOGIC ---
+        function toggleMenu() {
+            document.getElementById('menu-dropdown').classList.toggle('open');
+            document.getElementById('menu-overlay').classList.toggle('show');
+        }
+
+        // --- FILE SYSTEM API LOGIC ---
+
+        // 1. New
+        function handleNew() {
+            if(confirm("Discard current changes?")) {
+                editor.value = "";
+                currentFileHandle = null;
+                displayFilename.innerText = "untitled1.html";
+                updateLineNumbers();
+                toggleMenu();
+            }
+        }
+
+        // 2. Open (SAF)
+        async function handleOpen() {
+            toggleMenu();
+            try {
+                // Show the file picker
+                [currentFileHandle] = await window.showOpenFilePicker();
+                
+                // Get the file data
+                const file = await currentFileHandle.getFile();
+                const contents = await file.text();
+                
+                // Update UI
+                editor.value = contents;
+                displayFilename.innerText = file.name;
+                displayPath.innerText = "Opened via SAF"; // Security restriction hides real path
+                updateLineNumbers();
+                
+            } catch (err) {
+                if(err.name !== 'AbortError') {
+                    alert("Error opening file: " + err.message);
+                }
+            }
+        }
+
+        // 3. Save
+        async function handleSave() {
+            toggleMenu();
+            if (currentFileHandle) {
+                try {
+                    const writable = await currentFileHandle.createWritable();
+                    await writable.write(editor.value);
+                    await writable.close();
+                    alert("Saved!");
+                } catch (err) {
+                    alert("Save failed: " + err.message);
+                }
+            } else {
+                showSaveAsModal(); // If no handle, Save As
+            }
+        }
+
+        // 4. Save As Modal Logic
+        function showSaveAsModal() {
+            toggleMenu(); // ensure menu is closed
+            document.getElementById('save-modal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('save-modal').classList.remove('active');
+            document.getElementById('ext-list').classList.remove('show');
+        }
+
+        function toggleExtDropdown() {
+            document.getElementById('ext-list').classList.toggle('show');
+        }
+
+        function setExt(ext) {
+            currentExtension = ext;
+            document.getElementById('ext-trigger').innerHTML = '.' + ext + ' &#9662;';
+            document.getElementById('ext-list').classList.remove('show');
+        }
+
+        // 5. Execute Save As (Create new file)
+        async function executeSaveAs() {
+            const filename = document.getElementById('filename-input').value;
+            const fullFilename = filename + '.' + currentExtension;
+
+            try {
+                const opts = {
+                    suggestedName: fullFilename,
+                    types: [{
+                        description: 'Text Files',
+                        accept: { 'text/plain': ['.' + currentExtension] },
+                    }],
+                };
+                
+                // Trigger Save Picker
+                currentFileHandle = await window.showSaveFilePicker(opts);
+                
+                // Write Data
+                const writable = await currentFileHandle.createWritable();
+                await writable.write(editor.value);
+                await writable.close();
+
+                // Update UI
+                displayFilename.innerText = currentFileHandle.name;
+                closeModal();
+                
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    alert("Save As failed: " + err.message);
+                    // Fallback for browsers without File System Access API
+                    fallbackSave(fullFilename, editor.value);
+                }
+            }
+        }
+
+        // Fallback for older browsers
+        function fallbackSave(filename, text) {
+            const blob = new Blob([text], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = filename;
+            a.click();
+            closeModal();
+        }
+
+        // Default Code
+        editor.value = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Mock Test</title>
+</head>
+<body>
+    <h1>Hello World</h1>
+</body>
+</html>`;
+        updateLineNumbers();
+
+    </script>
+</body>
+</html>

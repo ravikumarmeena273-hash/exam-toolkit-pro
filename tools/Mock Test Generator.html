@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Mock Test Generator</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; display: flex; gap: 20px; }
+        .box { flex: 1; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h2 { margin-top: 0; color: #444; border-bottom: 2px solid #007bff; padding-bottom: 10px;}
+        textarea { width: 100%; height: 450px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-family: monospace; font-size: 14px; }
+        button { background: #007bff; color: white; border: none; padding: 12px; border-radius: 5px; cursor: pointer; font-size: 16px; margin-top: 10px; width: 100%; transition: 0.3s; }
+        button:hover { background: #0056b3; }
+        .hint { font-size: 13px; color: #666; background: #e9ecef; padding: 8px; border-radius: 4px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<h1>🚀 Text to HTML Converter (Format: ###Q)</h1>
+
+<div class="container">
+    <div class="box">
+        <h2>1. Paste Text (With ###Q & ###EXP)</h2>
+        <div class="hint">Format: ###Q 1 .. ##A .. ##B .. ###ANS: (A) .. ###EXP ..</div>
+        <textarea id="rawInput" placeholder="Yahan apna ###Q format wala text paste karein..."></textarea>
+        <button onclick="generateCode()">Generate Mock Test Code</button>
+    </div>
+
+    <div class="box">
+        <h2>2. Copy HTML Code</h2>
+        <div class="hint">Output code copy karke nayi .html file banayein.</div>
+        <textarea id="outputCode" readonly placeholder="Code yahan aayega..."></textarea>
+        <button onclick="copyCode()" style="background: #28a745;">Copy Code</button>
+    </div>
+</div>
+
+<script>
+    function generateCode() {
+        const rawText = document.getElementById('rawInput').value;
+        
+        // --- PARSING LOGIC START ---
+        
+        // Split text by "###Q" followed by digits (Question Start)
+        // We use a regex lookahead or simply split and ignore the first empty chunk
+        const blocks = rawText.split(/###Q\s+(\d+)/).slice(1);
+        
+        let questionsJS = [];
+
+        // The split creates pairs: [Number, Content, Number, Content...]
+        for (let i = 0; i < blocks.length; i += 2) {
+            let qNum = blocks[i].trim();       // The Question Number (e.g., 69)
+            let content = blocks[i+1];         // The rest of the content
+
+            if(!content) continue;
+
+            // 1. Extract Question Text (Everything before ##A)
+            let qTextMatch = content.split('##A');
+            let qText = qTextMatch[0].trim();
+
+            // 2. Extract Options using Regex
+            // We look for ##A ... ##B ... ##C ... ##D ... ##E ...
+            const extractOpt = (tag) => {
+                // Matches ##A (content) until next ## or ###ANS or end
+                let regex = new RegExp(`##${tag}\\s+([\\s\\S]+?)(?=\\n##|###ANS|###EXP|$)`, 'i');
+                let match = content.match(regex);
+                return match ? match[1].trim() : null;
+            };
+
+            let optA = extractOpt('A');
+            let optB = extractOpt('B');
+            let optC = extractOpt('C');
+            let optD = extractOpt('D');
+            let optE = extractOpt('E'); // Your format has option E
+
+            // 3. Extract Answer (###ANS: (A))
+            let ansMatch = content.match(/###ANS:\s*\(?([A-E])\)?/i);
+            let correctAns = ansMatch ? ansMatch[1].toUpperCase() : "";
+
+            // 4. Extract Explanation (###EXP to End or separator)
+            let expMatch = content.split('###EXP');
+            let explanation = "";
+            if(expMatch.length > 1) {
+                // Remove any trailing separator lines like ━━━━━━━━
+                explanation = expMatch[1].split('━')[0].trim();
+            }
+
+            if (optA && optB && optC && optD) {
+                questionsJS.push({
+                    id: qNum,
+                    q: qText.replace(/"/g, '&quot;').replace(/\n/g, '<br>'), // Preserve line breaks
+                    a: optA,
+                    b: optB,
+                    c: optC,
+                    d: optD,
+                    e: optE || "Not Attempted", // Default if E missing
+                    ans: correctAns,
+                    exp: explanation.replace(/"/g, '&quot;').replace(/\n/g, '<br>')
+                });
+            }
+        }
+        // --- PARSING LOGIC END ---
+
+        // Generate HTML String
+        const finalHTML = `
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Practice Mock Test</title>
+<style>
+    body { font-family: 'Arial', sans-serif; background: #eef2f3; margin: 0; padding: 20px; }
+    .quiz-container { max-width: 900px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .header { text-align: center; border-bottom: 2px solid #f0f0f0; padding-bottom: 20px; margin-bottom: 20px; }
+    .question-box { margin-bottom: 30px; padding: 20px; border: 1px solid #e1e1e1; border-radius: 8px; background: #fafafa; }
+    
+    .q-text { font-size: 18px; font-weight: 600; margin-bottom: 15px; color: #2c3e50; line-height: 1.5; }
+    .q-id { background: #2c3e50; color: white; padding: 2px 8px; border-radius: 4px; font-size: 14px; margin-right: 10px; }
+
+    .options { display: grid; gap: 10px; }
+    .options label { display: flex; align-items: center; padding: 12px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; transition: 0.2s; background: white; }
+    .options label:hover { background: #f0f8ff; border-color: #007bff; }
+    .options input { margin-right: 12px; transform: scale(1.2); }
+
+    /* Result Colors */
+    .correct { background-color: #d4edda !important; border-color: #28a745 !important; color: #155724; font-weight: bold; }
+    .wrong { background-color: #f8d7da !important; border-color: #dc3545 !important; color: #721c24; }
+    
+    /* Explanation Box */
+    .exp-box { display: none; margin-top: 15px; padding: 15px; background: #e7f3ff; border-left: 5px solid #007bff; border-radius: 4px; color: #0056b3; font-size: 15px; }
+    .exp-title { font-weight: bold; margin-bottom: 5px; display: block; }
+
+    .footer-btn { text-align: center; margin-top: 30px; }
+    button.submit-btn { padding: 15px 40px; background: #28a745; color: white; border: none; font-size: 18px; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 0 #218838; }
+    button.submit-btn:active { transform: translateY(4px); box-shadow: none; }
+</style>
+</head>
+<body>
+
+<div class="quiz-container">
+    <div class="header">
+        <h1>📝 Online Mock Test Series</h1>
+        <p>Total Questions: \${questionsJS.length} | Max Marks: \${questionsJS.length}</p>
+    </div>
+    
+    <div id="quiz"></div>
+    
+    <div class="footer-btn">
+        <button class="submit-btn" onclick="submitQuiz()">Submit Test & Check Result</button>
+    </div>
+    <div id="result" style="text-align:center; font-size:22px; margin-top:20px; font-weight:bold; color: #333;"></div>
+</div>
+
+<script>
+    const quizData = ${JSON.stringify(questionsJS, null, 2)};
+
+    function loadQuiz() {
+        const quizDiv = document.getElementById('quiz');
+        let html = '';
+        quizData.forEach((item, index) => {
+            html += \`
+            <div class="question-box">
+                <div class="q-text"><span class="q-id">Q.\${item.id}</span> \${item.q}</div>
+                <div class="options">
+                    <label id="lbl-\${index}-A"><input type="radio" name="q\${index}" value="A"> (A) \${item.a}</label>
+                    <label id="lbl-\${index}-B"><input type="radio" name="q\${index}" value="B"> (B) \${item.b}</label>
+                    <label id="lbl-\${index}-C"><input type="radio" name="q\${index}" value="C"> (C) \${item.c}</label>
+                    <label id="lbl-\${index}-D"><input type="radio" name="q\${index}" value="D"> (D) \${item.d}</label>
+                    <label id="lbl-\${index}-E" style="color: #666; font-size: 0.9em;"><input type="radio" name="q\${index}" value="E"> (E) \${item.e}</label>
+                </div>
+                <div class="exp-box" id="exp-\${index}">
+                    <span class="exp-title">💡 व्याख्या (Explanation):</span>
+                    \${item.exp ? item.exp : 'No explanation provided.'}
+                </div>
+            </div>
+            \`;
+        });
+        quizDiv.innerHTML = html;
+    }
+
+    function submitQuiz() {
+        let score = 0;
+        quizData.forEach((item, index) => {
+            const selected = document.querySelector(\`input[name="q\${index}"]:checked\`);
+            const correctLbl = document.getElementById(\`lbl-\${index}-\${item.ans}\`);
+            const expBox = document.getElementById(\`exp-\${index}\`);
+
+            // Show Explanation
+            if(expBox) expBox.style.display = 'block';
+
+            // Reset Styles
+            ['A','B','C','D','E'].forEach(opt => {
+                const lbl = document.getElementById(\`lbl-\${index}-\${opt}\`);
+                if(lbl) lbl.classList.remove('correct', 'wrong');
+            });
+
+            // Mark Correct Answer Green
+            if(correctLbl) correctLbl.classList.add('correct');
+
+            if (selected) {
+                if (selected.value === item.ans) {
+                    score++;
+                } else {
+                    // Mark Wrong Answer Red
+                    document.getElementById(\`lbl-\${index}-\${selected.value}\`).classList.add('wrong');
+                }
+            }
+        });
+        
+        const resultDiv = document.getElementById('result');
+        resultDiv.innerHTML = \`🎯 Your Score: <span style="color:#007bff">\${score}</span> / \${quizData.length}\`;
+        
+        // Scroll to result
+        resultDiv.scrollIntoView({behavior: "smooth"});
+    }
+
+    loadQuiz();
+<\/script>
+</body>
+</html>`;
+
+        document.getElementById('outputCode').value = finalHTML;
+    }
+
+    function copyCode() {
+        const copyText = document.getElementById("outputCode");
+        copyText.select();
+        document.execCommand("copy");
+        alert("Code Copied! Save it as an HTML file.");
+    }
+</script>
+
+</body>
+</html>
