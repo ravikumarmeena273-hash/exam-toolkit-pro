@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scientific Exam Engine V8.0 (Final Answer Key)</title>
+
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+    svg: { fontCache: 'global' }
+  };
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<script src="https://unpkg.com/smiles-drawer@2.0.1/dist/smiles-drawer.min.js"></script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+Devanagari:wght@400;700&family=Roboto:wght@400;500;700&display=swap');
+
+@page { size: A4 portrait; margin: 0.5in; }
+body { font-family: "Roboto", "Noto Serif Devanagari", sans-serif; background: #f0f2f5; margin: 0; color: #333; line-height: 1.5; }
+
+/* Control Panel */
+.no-print { background: #fff; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-bottom: 2px solid #007bff; position: sticky; top: 0; z-index: 100; }
+textarea { width: 100%; height: 150px; font-family: monospace; font-size: 13px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; margin-bottom: 10px; }
+.btn-bar { display: flex; gap: 10px; flex-wrap: wrap; }
+button { padding: 10px 20px; cursor: pointer; border: none; border-radius: 6px; font-weight: 700; color: white; transition: 0.2s; font-size: 13px; }
+.btn-blue { background: #007bff; } .btn-blue:hover { background: #0056b3; }
+.btn-orange { background: #fd7e14; } .btn-orange:hover { background: #e36d0c; }
+.btn-green { background: #28a745; } .btn-green:hover { background: #218838; }
+.btn-fix { background: #6f42c1; }
+
+/* Paper Layout */
+.paper-container { background: white; width: 210mm; min-height: 297mm; margin: 20px auto; padding: 15mm; box-shadow: 0 0 20px rgba(0,0,0,0.05); }
+.header { display: flex; justify-content: space-between; border-bottom: 3px solid #000; margin-bottom: 20px; padding-bottom: 10px; font-weight: bold; font-size: 17px; }
+.paper-content { column-count: 2; column-gap: 30px; column-rule: 1px solid #eee; text-align: justify; }
+
+/* Reference Tags */
+.ref-box { background: #f1f3f5; border-left: 5px solid #6c757d; padding: 8px 12px; margin-bottom: 12px; font-size: 11.5px; color: #495057; border-radius: 0 4px 4px 0; font-style: italic; }
+.sec-ref-box { background: #fff3cd; border: 1px solid #ffeeba; color: #856404; font-size: 10.5px; padding: 6px 10px; border-radius: 4px; margin-top: 10px; font-weight: 600; display: block; clear: both; }
+
+/* Question Elements */
+.block { break-inside: avoid; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px dashed #ced4da; }
+.q-title { font-weight: 800; color: #d63384; margin-bottom: 6px; font-size: 15px; }
+.q-text { font-weight: 500; display: block; margin-bottom: 10px; font-size: 14px; color: #212529; }
+.options { margin-left: 20px; font-size: 13.5px; }
+.opt { display: block; margin-bottom: 5px; line-height: 1.4; }
+
+/* Inline Answers (Mode 1) */
+.ans-box { background: #e7f3ff; border-left: 5px solid #007bff; padding: 12px; margin-top: 15px; font-size: 13px; border-radius: 0 6px 6px 0; }
+.label-ans { font-weight: bold; color: #0056b3; margin-right: 5px; }
+
+/* End of Paper Answer Key (Mode 2) */
+.page-break { page-break-before: always; display: block; height: 1px; width: 100%; margin: 20px 0; border-top: 2px dashed #000; }
+.key-section { margin-top: 20px; column-count: 1 !important; }
+.key-header { background: #343a40; color: white; padding: 10px; font-size: 18px; font-weight: bold; text-align: center; margin-bottom: 20px; border-radius: 4px; }
+.key-item { background: #f8f9fa; border: 1px solid #dee2e6; padding: 15px; margin-bottom: 15px; border-radius: 6px; break-inside: avoid; }
+.key-q-ref { font-weight: bold; color: #d63384; margin-bottom: 5px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+
+@media print {
+  .no-print { display: none; }
+  .paper-container { width: 100%; box-shadow: none; margin: 0; padding: 0; }
+  body { background: white; }
+  /* Ensure page break works in print */
+  .page-break { border-top: none; } 
+}
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  <h2 style="margin:0 0 10px 0; color:#007bff;">📊 Exam Engine V8.0 (Universal)</h2>
+  <textarea id="inputText" placeholder="Paste your structured content here..."></textarea>
+  
+  <div class="btn-bar">
+    <button class="btn-fix" onclick="autoFix()">🛠️ Step 1: Fix Formatting</button>
+    <button class="btn-blue" onclick="render(0)">Mode: Question Paper Only</button>
+    <button class="btn-blue" onclick="render(1)">Mode: Show Answers Inline</button>
+    <button class="btn-orange" onclick="render(2)">Mode: Ans Key at End</button>
+    <button class="btn-green" onclick="window.print()">🖨️ Print PDF</button>
+  </div>
+</div>
+
+<div class="paper-container">
+  <div class="header">
+    <div>Competitive MCQ PYQ Series</div>
+    <div>TOTAL  | 2026</div>
+  </div>
+  <div class="paper-content" id="paper"></div>
+</div>
+
+<script>
+function autoFix() {
+    let text = document.getElementById("inputText").value;
+    text = text.replace(/([^\n])######/g, '$1\n######');
+    text = text.replace(/([^\n])###([A-E])/g, '$1\n###$2');
+    text = text.replace(/([^\n])####ANS:/g, '$1\n####ANS:');
+    text = text.replace(/([^\n])#####EXP:/g, '$1\n#####EXP:');
+    text = text.replace(/\n\s*\n/g, '\n');
+    document.getElementById("inputText").value = text.trim();
+    alert("Formatting Cleaned! Click a Render Mode.");
+}
+
+function render(mode) {
+    let raw = document.getElementById("inputText").value;
+    const paper = document.getElementById("paper");
+    paper.innerHTML = "";
+    
+    // Inject logic for simplified blocks
+    if (raw.includes("######") && !raw.includes("#@#")) {
+        raw = raw.replace(/######/g, "#@#######");
+    }
+
+    const sections = raw.split(/#@#/).slice(1);
+    let answerKeyHtmlBuffer = ""; // Store for Mode 2
+
+    sections.forEach((section, idx) => {
+        // --- Extraction Logic ---
+        let parts = section.split('######');
+        let refPart = parts[0] ? parts[0].trim() : ""; 
+        let bodyPart = parts[1] || "";
+        
+        if(!bodyPart) return;
+
+        let qLines = bodyPart.split('\n');
+        let qTitle = qLines[0].trim(); 
+        let qContent = qLines.slice(1).join('\n'); 
+
+        const format = (str) => {
+            if(!str) return "";
+            str = str.replace(/\[SMILES:\s*([^\]]+)\]/g, (m, smile) => {
+                let id = 'c_' + Math.random().toString(36).substr(2, 5);
+                setTimeout(() => drawSmiles(id, smile), 200);
+                return `<canvas id="${id}" style="display:block; margin:8px 0; border:1px solid #eee;"></canvas>`;
+            });
+            return str.replace(/\n/g, "<br>");
+        };
+
+        // Options Extraction
+        const getOpt = (tag) => {
+            let reg = new RegExp(`###${tag}([^#]*)`, 'i');
+            let m = bodyPart.match(reg);
+            return m ? m[1].split('##@#')[0].trim() : null;
+        };
+
+        // Metadata Extraction
+        let secRefVal = "";
+        let secRefMatch = bodyPart.match(/##@#\s*([\s\S]*?)(?=####ANS|#####EXP|###[A-E]|$)/i);
+        if (secRefMatch) secRefVal = secRefMatch[1].trim();
+
+        let ansMatch = bodyPart.match(/####ANS:\s*([A-E])/i);
+        let ansVal = ansMatch ? ansMatch[1] : "?";
+        let expMatch = bodyPart.match(/#####EXP:([\s\S]*)/i);
+        let expVal = expMatch ? expMatch[1].trim() : "No explanation provided.";
+
+        // --- Render Question Block ---
+        let div = document.createElement("div");
+        div.className = "block";
+        
+        let html = `
+            ${refPart ? `<div class="ref-box">${format(refPart)}</div>` : ''}
+            <div class="q-title">${qTitle}</div>
+            <div class="q-text">${format(qContent.split('###A')[0].trim())}</div>
+            <div class="options">
+                ${['A','B','C','D','E'].map(l => {
+                    let o = getOpt(l);
+                    return o ? `<span class="opt"><b>(${l})</b> ${format(o)}</span>` : '';
+                }).join('')}
+            </div>
+            ${secRefVal ? `<div class="sec-ref-box">Source: ${format(secRefVal)}</div>` : ''}
+        `;
+
+        // MODE 1: Inline Answers
+        if (mode === 1) {
+            html += `<div class="ans-box">
+                <div><span class="label-ans">Correct Answer:</span> (${ansVal})</div>
+                <div style="margin-top:5px"><span class="label-ans">Solution:</span> ${format(expVal)}</div>
+            </div>`;
+        }
+
+        // MODE 2: Build Buffer (Don't show inline)
+        if (mode === 2) {
+            answerKeyHtmlBuffer += `
+                <div class="key-item">
+                    <div class="key-q-ref">Question #${idx + 1} (${qTitle})</div>
+                    <div><span class="label-ans">Correct Answer:</span> <b>(${ansVal})</b></div>
+                    <div style="margin-top:5px; border-top:1px dashed #ccc; padding-top:5px;">
+                        <span class="label-ans">Explanation:</span> ${format(expVal)}
+                    </div>
+                </div>
+            `;
+        }
+        
+        div.innerHTML = html;
+        paper.appendChild(div);
+    });
+
+    // --- MODE 2: Append Answer Key Section at the END ---
+    if (mode === 2 && answerKeyHtmlBuffer) {
+        let keyDiv = document.createElement("div");
+        keyDiv.innerHTML = `
+            <div class="page-break"></div>
+            <div class="key-section">
+                <div class="key-header">📝 Detailed Answer Key & Solutions</div>
+                ${answerKeyHtmlBuffer}
+            </div>
+        `;
+        paper.appendChild(keyDiv);
+    }
+
+    if (window.MathJax) MathJax.typesetPromise([paper]);
+}
+
+function drawSmiles(id, smile) {
+    let sd = new SmilesDrawer.Drawer({ width: 150, height: 100, bondThickness: 1.2 });
+    SmilesDrawer.parse(smile, (tree) => sd.draw(tree, id, 'light', false));
+}
+</script>
+</body>
+</html>
