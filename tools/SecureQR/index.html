@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Air-Gapped Secure QR | Enterprise</title>
+    
+    <script type="text/javascript" src="qr-code-styling.js"></script>
+
+    <style>
+        /* PURE CSS - OFFLINE COMPATIBLE */
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg-color: #f3f4f6;
+            --panel-bg: rgba(255, 255, 255, 0.95);
+            --border: #e5e7eb;
+            --text-main: #1f2937;
+            --text-sub: #6b7280;
+        }
+
+        * { box-sizing: border-box; }
+        
+        body {
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* Navbar */
+        nav {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 0 1.5rem;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .nav-brand { font-weight: 700; font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem; }
+        .badge {
+            background: #dcfce7; color: #166534; padding: 0.25rem 0.75rem;
+            border-radius: 9999px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+        }
+
+        /* Layout */
+        main {
+            flex: 1;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+        
+        @media (min-width: 1024px) {
+            main { grid-template-columns: 1.2fr 1fr; } 
+        }
+
+        /* Panels */
+        .glass-panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        h2 { margin: 0 0 1.25rem 0; font-size: 1.125rem; display: flex; align-items: center; gap: 0.5rem; color: #111827; }
+        .icon-box { background: #e0e7ff; color: var(--primary); padding: 5px; border-radius: 6px; display: flex; }
+
+        /* Inputs */
+        .input-group { margin-bottom: 1rem; }
+        label { display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.4rem; color: #374151; }
+        input, textarea, select {
+            width: 100%; padding: 0.6rem;
+            border: 1px solid #d1d5db; border-radius: 0.375rem;
+            font-size: 0.95rem; background: #fff;
+        }
+        input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
+
+        /* Tabs */
+        .tabs { display: flex; border-bottom: 2px solid #e5e7eb; margin-bottom: 1.5rem; }
+        .tab-btn {
+            background: none; border: none; padding: 0.75rem 1.25rem;
+            font-weight: 600; color: var(--text-sub); cursor: pointer;
+            border-bottom: 2px solid transparent; margin-bottom: -2px;
+        }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+        .hidden { display: none; }
+
+        /* PREVIEW AREA */
+        .preview-sticky { position: sticky; top: 90px; }
+        
+        .canvas-wrapper {
+            background: #fff;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 1px solid #e5e7eb;
+            margin-bottom: 1.5rem;
+            
+            /* Constrain width */
+            max-width: 380px; 
+            margin-left: auto; 
+            margin-right: auto;
+            min-height: 380px; /* Prevent jumpiness */
+        }
+
+        #canvas {
+            /* The image inside will be strictly controlled by JS */
+        }
+
+        /* Buttons & Grids */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; max-width: 400px; margin: 0 auto; }
+        .btn {
+            display: flex; justify-content: center; align-items: center;
+            padding: 0.75rem; border-radius: 0.5rem; font-weight: 600;
+            cursor: pointer; border: 1px solid transparent; transition: all 0.2s;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-secondary { background: white; border-color: #d1d5db; color: var(--text-main); }
+        .btn-secondary:hover { background: #f9fafb; border-color: #9ca3af; }
+
+        /* Color Picker */
+        .color-row { display: flex; align-items: center; justify-content: space-between; border: 1px solid #d1d5db; padding: 0.4rem; border-radius: 0.375rem; background: white; }
+        input[type="color"] { border: none; width: 30px; height: 30px; padding: 0; background: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="nav-brand">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+            <span style="margin-left: 8px;">AirGap QR <span style="color:#9ca3af; font-weight:400;">Pro</span></span>
+        </div>
+        <span class="badge">Offline Mode</span>
+    </nav>
+
+    <main>
+        <div class="controls">
+            
+            <div class="glass-panel">
+                <h2>Content</h2>
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="switchTab('url')">URL Link</button>
+                    <button class="tab-btn" onclick="switchTab('text')">Plain Text</button>
+                    <button class="tab-btn" onclick="switchTab('wifi')">WiFi Access</button>
+                </div>
+
+                <div id="url-form" class="tab-content">
+                    <div class="input-group">
+                        <label>Website URL</label>
+                        <input type="url" id="data-url" placeholder="https://internal-server.local" oninput="updateQR()">
+                    </div>
+                </div>
+
+                <div id="text-form" class="tab-content hidden">
+                    <div class="input-group">
+                        <label>Secure Text</label>
+                        <textarea id="data-text" rows="4" placeholder="Enter sensitive text..." oninput="updateQR()"></textarea>
+                    </div>
+                </div>
+
+                <div id="wifi-form" class="tab-content hidden">
+                    <div class="input-group">
+                        <label>Network SSID</label>
+                        <input type="text" id="wifi-ssid" placeholder="MyNetwork" oninput="updateQR()">
+                    </div>
+                    <div class="grid-2">
+                        <div class="input-group">
+                            <label>Password</label>
+                            <input type="text" id="wifi-pass" oninput="updateQR()">
+                        </div>
+                        <div class="input-group">
+                            <label>Security</label>
+                            <select id="wifi-type" onchange="updateQR()">
+                                <option value="WPA">WPA/WPA2</option>
+                                <option value="WEP">WEP</option>
+                                <option value="nopass">None</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel">
+                <h2>Design</h2>
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label>Dot Color</label>
+                        <div class="color-row">
+                            <span>Pick</span>
+                            <input type="color" id="color-dots" value="#4f46e5" oninput="updateQR()">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>Background</label>
+                        <div class="color-row">
+                            <span>Pick</span>
+                            <input type="color" id="color-bg" value="#ffffff" oninput="updateQR()">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label>Pattern Style</label>
+                        <select id="style-dots" onchange="updateQR()">
+                            <option value="square">Square</option>
+                            <option value="dots">Dots</option>
+                            <option value="rounded">Rounded</option>
+                            <option value="classy">Classy</option>
+                            <option value="classy-rounded">Classy Round</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Corner Style</label>
+                        <select id="style-corners" onchange="updateQR()">
+                            <option value="square">Square</option>
+                            <option value="dot">Dot</option>
+                            <option value="extra-rounded">Round</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="input-group" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+                    <label>Logo / Watermark</label>
+                    <input type="file" id="logo-file" accept="image/*" style="font-size: 0.85rem;">
+                </div>
+            </div>
+        </div>
+
+        <div class="preview-area">
+            <div class="preview-sticky">
+                <div class="glass-panel" style="text-align: center;">
+                    <h3 style="color: var(--text-sub); text-transform: uppercase; font-size: 0.7rem; letter-spacing: 1.5px; margin-bottom: 1.5rem; font-weight: 700;">Live Preview</h3>
+                    
+                    <div class="canvas-wrapper">
+                        <div id="canvas"></div>
+                    </div>
+                    
+                    <div class="btn-row">
+                        <button class="btn btn-primary" onclick="triggerDownload('png')">
+                            PNG (4000px)
+                        </button>
+                        <button class="btn btn-secondary" onclick="triggerDownload('svg')">
+                            SVG (Vector)
+                        </button>
+                    </div>
+                    <p style="margin-top: 1rem; font-size: 0.8rem; color: #9ca3af;">Generated locally. No data leaves this device.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Check for library
+        if (typeof QRCodeStyling === 'undefined') {
+            alert("Error: qr-code-styling.js not found. Please ensure it is in the same folder.");
+        }
+
+        // 1. CREATE PREVIEW INSTANCE (SMALL SIZE)
+        // We set this to 350px so it ALWAYS fits the screen.
+        const previewQR = new QRCodeStyling({
+            width: 350,  
+            height: 350,
+            type: "svg",
+            data: "https://internal-site.local",
+            image: "",
+            dotsOptions: { color: "#4f46e5", type: "square" },
+            backgroundOptions: { color: "#ffffff" },
+            imageOptions: { crossOrigin: "anonymous", margin: 10 },
+            qrOptions: { errorCorrectionLevel: 'H' }
+        });
+
+        previewQR.append(document.getElementById("canvas"));
+        
+        // --- STATE MANAGEMENT ---
+        let currentTab = 'url';
+        let uploadedLogo = null;
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            document.querySelectorAll('.tab-content').forEach(d => d.classList.add('hidden'));
+            document.getElementById(tab + '-form').classList.remove('hidden');
+            updateQR();
+        }
+
+        // --- HELPER TO GET CURRENT OPTIONS ---
+        function getQROptions(size) {
+            // Get Data
+            let data = "";
+            if (currentTab === 'url') data = document.getElementById('data-url').value || "https://internal-site.local";
+            else if (currentTab === 'text') data = document.getElementById('data-text').value || "Secure Text";
+            else if (currentTab === 'wifi') {
+                const ssid = document.getElementById('wifi-ssid').value;
+                const pass = document.getElementById('wifi-pass').value;
+                const type = document.getElementById('wifi-type').value;
+                data = `WIFI:T:${type};S:${ssid};P:${pass};;`;
+            }
+
+            // Get Styles
+            const dotsColor = document.getElementById('color-dots').value;
+            const bgColor = document.getElementById('color-bg').value;
+            const dotsStyle = document.getElementById('style-dots').value;
+            const cornerStyle = document.getElementById('style-corners').value;
+
+            // Return Config Object
+            return {
+                width: size,
+                height: size,
+                data: data,
+                dotsOptions: { color: dotsColor, type: dotsStyle },
+                backgroundOptions: { color: bgColor },
+                cornersSquareOptions: { color: dotsColor, type: cornerStyle },
+                cornersDotOptions: { color: dotsColor },
+                image: uploadedLogo,
+                imageOptions: { margin: 10 },
+                qrOptions: { errorCorrectionLevel: 'H' }
+            };
+        }
+
+        // --- UPDATE PREVIEW ---
+        function updateQR() {
+            // Update the preview instance with SMALL size (350px)
+            previewQR.update(getQROptions(350));
+        }
+
+        // --- DOWNLOAD LOGIC (SEPARATE INSTANCE) ---
+        function triggerDownload(ext) {
+            // Create a NEW temporary instance just for the download
+            // This one is set to 4000px (High Res)
+            const downloadInstance = new QRCodeStyling(getQROptions(4000));
+            
+            downloadInstance.download({ 
+                name: "secure-qr-enterprise", 
+                extension: ext 
+            });
+        }
+
+        // --- LOGO HANDLING ---
+        document.getElementById('logo-file').addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    uploadedLogo = e.target.result;
+                    updateQR();
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+    </script>
+</body>
+</html>
